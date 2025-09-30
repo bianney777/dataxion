@@ -366,7 +366,7 @@
             {name:'precauciones', label:'Precauciones', type:'textarea'}
           ]}
         };
-        const schema = schemas[key]; if(!schema) return;
+  const schema = schemas[key] || (data && data.__schema ? schemas[data.__schema]: null); if(!schema) return;
         const formId='form_'+Date.now();
         modalHost.style.display='block';
         modalHost.innerHTML = `<div class="modal-overlay"><div class="modal-box animate-in"><button class="modal-close" data-close>&times;</button><h3>${schema.title}</h3><form id="${formId}" class="modal-form flex flex-col gap-5"></form><div class="flex justify-end gap-2 pt-2"><button class="btn btn-outline btn-sm" data-close>Cancelar</button><button class="btn btn-success btn-sm" type="submit" form="${formId}">Guardar</button></div></div></div>`;
@@ -415,11 +415,58 @@
           if(newCultivosGrid) document.getElementById('cultivosGrid').innerHTML=newCultivosGrid.innerHTML;
           if(newInsumosGrid) document.getElementById('insumosGrid').innerHTML=newInsumosGrid.innerHTML;
           showToast('success','Catálogo actualizado');
+          // Reaplicar handlers tras refresco
+          attachCrudHandlers();
         } catch(e){ /* silent */ }
       }
       document.querySelectorAll('[data-open-modal]').forEach(btn=>{
         btn.addEventListener('click', ()=> openModal(btn.getAttribute('data-open-modal')));
       });
+      function attachCrudHandlers(){
+        document.querySelectorAll('[data-edit]').forEach(b=>{
+          b.addEventListener('click', async ()=>{
+            const entity=b.getAttribute('data-edit');
+            const id=b.getAttribute('data-id');
+            const map={
+              'categoria-cultivo': { url:'/api/catalogo/categorias-cultivo/'+id, schema:'createCategoriaCultivo', endpoint:'/api/catalogo/categorias-cultivo/'+id, method:'PUT' },
+              'tipo-cultivo': { url:'/api/catalogo/tipos-cultivo/'+id, schema:'createTipoCultivo', endpoint:'/api/catalogo/tipos-cultivo/'+id, method:'PUT' },
+              'variedad-cultivo': { url:'/api/catalogo/variedades-cultivo/'+id, schema:'createVariedadCultivo', endpoint:'/api/catalogo/variedades-cultivo/'+id, method:'PUT' },
+              'categoria-insumo': { url:'/api/catalogo/categorias-insumo/'+id, schema:'createCategoriaInsumo', endpoint:'/api/catalogo/categorias-insumo/'+id, method:'PUT' },
+              'insumo': { url:'/api/catalogo/insumos/'+id, schema:'createInsumo', endpoint:'/api/catalogo/insumos/'+id, method:'PUT' }
+            };
+            const cfg=map[entity]; if(!cfg) return;
+            try { const r= await fetch(cfg.url); const j= await r.json(); if(j.ok){ const data=j.data; data.__schema=cfg.schema; openModal(cfg.schema, data); // luego ajustar método
+              setTimeout(()=>{ // mutar método & endpoint a update
+                const form = document.querySelector('.modal-box form'); if(form){ form.closest('.modal-box').querySelector('h3').innerHTML='Editar'; }
+                // Override submit handler
+                const schemaKey=cfg.schema; const schemasBtn=document.querySelectorAll('.modal-box button[type=submit]'); schemasBtn.forEach(sb=> sb.textContent='Actualizar');
+                const schemaOriginalEndpoint = cfg.endpoint; const schemaOriginalMethod=cfg.method;
+                // Cambiar dataset para interceptar
+                form.dataset.endpoint = schemaOriginalEndpoint; form.dataset.method = schemaOriginalMethod;
+                form.addEventListener('submit', function override(e){
+                  if(!form.dataset.method) return; // already handled previously
+                }, { once:true });
+              }, 40);
+            } else showToast('error','No encontrado'); } catch(e){ showToast('error','Error cargando'); }
+          });
+        });
+        document.querySelectorAll('[data-delete]').forEach(b=>{
+          b.addEventListener('click', async ()=>{
+            const entity=b.getAttribute('data-delete');
+            const id=b.getAttribute('data-id');
+            if(!confirm('¿Eliminar registro?')) return;
+            const map={
+              'categoria-cultivo': '/api/catalogo/categorias-cultivo/'+id,
+              'tipo-cultivo': '/api/catalogo/tipos-cultivo/'+id,
+              'variedad-cultivo': '/api/catalogo/variedades-cultivo/'+id,
+              'categoria-insumo': '/api/catalogo/categorias-insumo/'+id,
+              'insumo': '/api/catalogo/insumos/'+id
+            };
+            try { const r= await fetch(map[entity], { method:'DELETE' }); const j= await r.json(); if(j.ok){ showToast('success','Eliminado'); reloadCatalogPartial(); } else showToast('error', j.message||'Error'); } catch(e){ showToast('error','Fallo'); }
+          });
+        });
+      }
+      attachCrudHandlers();
     })();
   });
 })();

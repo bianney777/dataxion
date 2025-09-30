@@ -59,18 +59,24 @@
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">Cultivos <span class="live-badge">LIVE</span></h3>
         <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3" id="cultivosGrid">
           <% categoriasCultivo.forEach(cat => { const tipos = tiposPorCategoria[cat.id_categoria] || []; %>
-            <div class="glass-card rounded-xl p-5 flex flex-col gap-3 border border-slate-200/60 relative group" data-kind="cultivo" data-name="<%= cat.nombre_categoria %>">
+            <div class="glass-card rounded-xl p-5 flex flex-col gap-3 border border-slate-200/60 relative group" data-kind="cultivo" data-name="<%= cat.nombre_categoria %>" data-entity="categoria-cultivo" data-id="<%= cat.id_categoria %>">
               <div class="flex justify-between items-start">
                 <div>
                   <h4 class="font-semibold text-slate-800 group-hover:text-emerald-600 transition flex items-center gap-2"><%= cat.nombre_categoria %></h4>
                   <p class="text-[11px] text-slate-500 mt-1"><%= cat.descripcion || 'Sin descripción.' %></p>
                 </div>
-                <span class="status-badge status-activa"><%= tipos.length %> tipos</span>
+                <div class="flex flex-col items-end gap-2">
+                  <span class="status-badge status-activa"><%= tipos.length %> tipos</span>
+                  <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                    <button class="btn btn-outline btn-xs" data-edit="categoria-cultivo" data-id="<%= cat.id_categoria %>">Editar</button>
+                    <button class="btn btn-danger btn-xs" data-delete="categoria-cultivo" data-id="<%= cat.id_categoria %>">X</button>
+                  </div>
+                </div>
               </div>
               <% if (tipos.length) { %>
                 <div class="border border-slate-200/60 rounded-lg divide-y divide-slate-200 overflow-hidden bg-white/40 backdrop-blur-sm">
                   <% tipos.forEach(t => { %>
-                    <div class="p-3 flex flex-col gap-1" data-kind="cultivo" data-name="<%= t.nombre_tipo %>">
+                    <div class="p-3 flex flex-col gap-1 group/item" data-kind="cultivo" data-name="<%= t.nombre_tipo %>" data-entity="tipo-cultivo" data-id="<%= t.id_tipo_cultivo %>">
                       <div class="flex justify-between items-center">
                         <span class="text-[12px] font-semibold text-slate-700"><%= t.nombre_tipo %></span>
                         <% if (t.nombre_cientifico) { %><span class="text-[10px] italic text-slate-500"><%= t.nombre_cientifico %></span><% } %>
@@ -79,6 +85,10 @@
                       <div class="flex flex-wrap gap-1 mt-1">
                         <% if (t.temporada_optima) { %><span class="metric-chip">Temporada: <%= t.temporada_optima %></span><% } %>
                         <% if (t.dias_cosecha) { %><span class="metric-chip">Días: <%= t.dias_cosecha %></span><% } %>
+                      </div>
+                      <div class="flex gap-1 mt-1 opacity-0 group-hover/item:opacity-100 transition">
+                        <button class="btn btn-outline btn-xs" data-edit="tipo-cultivo" data-id="<%= t.id_tipo_cultivo %>">Editar</button>
+                        <button class="btn btn-danger btn-xs" data-delete="tipo-cultivo" data-id="<%= t.id_tipo_cultivo %>">X</button>
                       </div>
                     </div>
                   <% }) %>
@@ -95,18 +105,24 @@
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Insumos</h3>
         <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3" id="insumosGrid">
           <% categoriasInsumo.forEach(cat => { const insCat = insumos.filter(i=> i.id_categoria_insumo === cat.id_categoria_insumo); %>
-            <div class="glass-card rounded-xl p-5 flex flex-col gap-3 border border-slate-200/60 group" data-kind="insumo" data-name="<%= cat.nombre_categoria %>">
+            <div class="glass-card rounded-xl p-5 flex flex-col gap-3 border border-slate-200/60 group" data-kind="insumo" data-name="<%= cat.nombre_categoria %>" data-entity="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">
               <div class="flex justify-between items-start">
                 <div>
                   <h4 class="font-semibold text-slate-800 group-hover:text-indigo-600 transition"><%= cat.nombre_categoria %></h4>
                   <p class="text-[11px] text-slate-500 mt-1"><%= cat.descripcion || 'Sin descripción.' %></p>
                 </div>
-                <span class="status-badge status-activa"><%= insCat.length %> insumos</span>
+                <div class="flex flex-col items-end gap-2">
+                  <span class="status-badge status-activa"><%= insCat.length %> insumos</span>
+                  <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                    <button class="btn btn-outline btn-xs" data-edit="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">Editar</button>
+                    <button class="btn btn-danger btn-xs" data-delete="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">X</button>
+                  </div>
+                </div>
               </div>
               <% if (insCat.length) { %>
                 <div class="border border-slate-200/60 rounded-lg divide-y divide-slate-200 overflow-hidden bg-white/40 backdrop-blur-sm">
                   <% insCat.forEach(ins => { %>
-                    <div class="p-3 flex flex-col gap-1" data-kind="insumo" data-name="<%= ins.nombre_insumo %>">
+                    <div class="p-3 flex flex-col gap-1 group/item" data-kind="insumo" data-name="<%= ins.nombre_insumo %>" data-entity="insumo" data-id="<%= ins.id_insumo %>">
                       <div class="flex justify-between items-center">
                         <span class="text-[12px] font-semibold text-slate-700"><%= ins.nombre_insumo %></span>
                         <% if (ins.fabricante) { %><span class="text-[10px] text-slate-500"><%= ins.fabricante %></span><% } %>
@@ -114,6 +130,10 @@
                       <% if (ins.descripcion) { %><p class="text-[10px] text-slate-500 leading-snug"><%= ins.descripcion.substring(0,140) %><%= ins.descripcion.length>140?'...':'' %></p><% } %>
                       <div class="flex flex-wrap gap-1 mt-1">
                         <% if (ins.tipo) { %><span class="metric-chip">Tipo: <%= ins.tipo %></span><% } %>
+                      </div>
+                      <div class="flex gap-1 mt-1 opacity-0 group-hover/item:opacity-100 transition">
+                        <button class="btn btn-outline btn-xs" data-edit="insumo" data-id="<%= ins.id_insumo %>">Editar</button>
+                        <button class="btn btn-danger btn-xs" data-delete="insumo" data-id="<%= ins.id_insumo %>">X</button>
                       </div>
                     </div>
                   <% }) %>
