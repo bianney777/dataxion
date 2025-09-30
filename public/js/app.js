@@ -302,22 +302,64 @@
         const kind = filter?.value || '';
         cards.forEach(c=>{
           const name = (c.getAttribute('data-name')||'').toLowerCase();
-          const k = c.getAttribute('data-kind');
-          const matchQ = !q || name.includes(q);
-          const matchK = !kind || k===kind;
-          c.style.display = (matchQ && matchK) ? '' : 'none';
+            const k = c.getAttribute('data-kind');
+            const matchQ = !q || name.includes(q);
+            const matchK = !kind || k===kind;
+            c.style.display = (matchQ && matchK) ? '' : 'none';
+        });
+      }
+      function hydrateCategoryIcons(){
+        if(!window.CATALOG_ICONS || !window.getIconSvg) return;
+        document.querySelectorAll('.tile-icon[data-icon-key]').forEach(el=>{
+          const key = el.getAttribute('data-icon-key'); if(!key) return; const svg=window.getIconSvg(key); if(svg){ el.innerHTML=svg; }
+        });
+      }
+      function setupTileInteractions(){
+        const tiles = document.querySelectorAll('.catalog-tile');
+        tiles.forEach(tile=>{
+          const detail = tile.querySelector('.tile-detail');
+          tile.addEventListener('click', (e)=>{
+            if(e.target.closest('.tile-actions') || e.target.closest('button[data-edit]') || e.target.closest('button[data-delete]')) return; // ignore action clicks
+            const expanded = !detail.hasAttribute('hidden');
+            document.querySelectorAll('.catalog-tile .tile-detail:not([hidden])').forEach(d=>{ if(d!==detail) d.setAttribute('hidden',''); });
+            document.querySelectorAll('.catalog-tile.expanded').forEach(t=> t.classList.remove('expanded'));
+            if(expanded){ detail.setAttribute('hidden',''); }
+            else { tile.classList.add('expanded'); detail.removeAttribute('hidden'); renderMiniBars(detail); }
+          });
+        });
+      }
+      function renderMiniBars(scope){
+        scope.querySelectorAll('.mini-bars').forEach(barWrap=>{
+          const mode = barWrap.getAttribute('data-bars');
+          if(mode==='dias'){
+            const items = Array.from(scope.querySelectorAll('.detail-item[data-dias]'));
+            if(!items.length){ barWrap.innerHTML='<div class="tile-chart-placeholder">Sin datos de días</div>'; return; }
+            const vals = items.map(i=> parseInt(i.getAttribute('data-dias'))).filter(n=>!isNaN(n));
+            if(!vals.length){ barWrap.innerHTML='<div class="tile-chart-placeholder">Sin datos válidos</div>'; return; }
+            const max = Math.max(...vals);
+            barWrap.innerHTML = vals.map(v=> `<div class="bar" style="height:${(v/max)*100}%" data-v="${v}"></div>`).join('');
+          } else if(mode==='insumos'){
+            const items = Array.from(scope.querySelectorAll('.detail-item'));
+            const count = items.length; if(!count){ barWrap.innerHTML='<div class="tile-chart-placeholder">Vacío</div>'; return; }
+            barWrap.innerHTML = '<div class="bar" style="height:100%" data-v="'+count+'"></div>';
+          }
+        });
+      }
+      // call interactions after initial paint
+      setupTileInteractions();
+      function hydrateCategoryIcons(){
+        if(!window.CATALOG_ICONS || !window.getIconSvg) return;
+        document.querySelectorAll('.cat-icon-bubble[data-icon-key]').forEach(el=>{
+          const key = el.getAttribute('data-icon-key');
+          if(!key) return;
+          const svg = window.getIconSvg(key);
+          if(svg){ el.innerHTML = `<div class="hydrated-icon">${svg}</div>`; }
         });
       }
       search && search.addEventListener('input', debounce(apply,300));
       filter && filter.addEventListener('change', apply);
-      document.getElementById('expandAllBtn')?.addEventListener('click',()=>{
-        // Placeholder para futuro: si se agregan secciones colapsables
-        showToast('success','Todo expandido (placeholder)');
-      });
-      document.getElementById('collapseAllBtn')?.addEventListener('click',()=>{
-        showToast('success','Todo colapsado (placeholder)');
-      });
       apply();
+      hydrateCategoryIcons();
 
       /* --- CRUD dinámico catálogo --- */
       const modalHost = document.getElementById('modalHost');
@@ -366,7 +408,7 @@
             {name:'precauciones', label:'Precauciones', type:'textarea'}
           ]}
         };
-  const schema = schemas[key] || (data && data.__schema ? schemas[data.__schema]: null); if(!schema) return;
+        const schema = schemas[key] || (data && data.__schema ? schemas[data.__schema]: null); if(!schema) return;
         const formId='form_'+Date.now();
         modalHost.style.display='block';
         modalHost.innerHTML = `<div class="modal-overlay"><div class="modal-box animate-in"><button class="modal-close" data-close>&times;</button><h3>${schema.title}</h3><form id="${formId}" class="modal-form flex flex-col gap-5"></form><div class="flex justify-end gap-2 pt-2"><button class="btn btn-outline btn-sm" data-close>Cancelar</button><button class="btn btn-success btn-sm" type="submit" form="${formId}">Guardar</button></div></div></div>`;
@@ -374,7 +416,7 @@
         const form = modalHost.querySelector('form');
         schema.fields.forEach(f=>{
           const row=document.createElement('div'); row.className='form-row';
-          row.innerHTML = `<label>${f.label}${f.required?' *':''}</label>${buildInput(f, data? data[f.name]: null)}`;
+          row.innerHTML = `<label>${f.label}${f.required?' *':''}</label>${buildInput(f, data? data[f.name]: null, f.name)}`;
           form.appendChild(row);
         });
         modalHost.addEventListener('click', e=>{ if(e.target.matches('[data-close]') || e.target===modalHost.querySelector('.modal-overlay')) closeModal(); });
@@ -400,14 +442,46 @@
           const sel=form.querySelector(`[name="${f.name}"]`); if(!sel) return; sel.innerHTML='<option value="">Cargando...</option>';
             try { const r= await fetch(f.optionsSource); const j= await r.json(); if(j.ok){ sel.innerHTML='<option value="">Seleccione...</option>'+ j.data.map(o=>`<option value="${o[f.optionValue]}">${o[f.optionLabel]}</option>`).join(''); if(data && data[f.name]) sel.value=data[f.name]; } else sel.innerHTML='<option value="">Error</option>'; } catch(e){ sel.innerHTML='<option value="">Error</option>'; }
         });
+        initIconPicker();
       }
-      function buildInput(f, value){
+      function buildInput(f, value, fieldName){
+        if(fieldName==='icono'){
+          const current = value || '';
+          return `<div class="icon-picker-wrapper relative">
+            <input type="hidden" name="icono" value="${current}" />
+            <button type="button" class="icon-picker-trigger" data-icon-trigger>
+              <span class="icon-preview" data-icon-preview>${ current ? (window.getIconSvg? window.getIconSvg(current): current) : '🌿' }</span>
+              <span>${ current || 'Elegir icono' }</span>
+            </button>
+          </div>`;
+        }
         if(f.type==='textarea') return `<textarea name="${f.name}" class="input-modern" rows="3">${value? value: ''}</textarea>`;
         if(f.type==='number') return `<input type="number" step="any" name="${f.name}" value="${value? value: ''}" class="input-modern" />`;
         if(f.type==='select-static') return `<select name="${f.name}" class="input-modern">${f.options.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}</select>`;
         if(f.type==='select') return `<select name="${f.name}" class="input-modern"><option value="">Cargando...</option></select>`;
         return `<input type="text" name="${f.name}" value="${value? value: ''}" class="input-modern" />`;
       }
+      function initIconPicker(){
+        const trigger = modalHost.querySelector('[data-icon-trigger]'); if(!trigger || !window.CATALOG_ICONS) return;
+        const wrapper = trigger.closest('.icon-picker-wrapper');
+        let panel; const hidden = wrapper.querySelector('input[name=icono]'); const preview = wrapper.querySelector('[data-icon-preview]');
+        function closePanel(){ panel && panel.remove(); panel=null; document.removeEventListener('click', outside); }
+        function outside(e){ if(panel && !panel.contains(e.target) && !trigger.contains(e.target)){ closePanel(); } }
+        trigger.addEventListener('click', ()=>{
+          if(panel){ closePanel(); return; }
+          panel = document.createElement('div'); panel.className='icon-picker-panel';
+          panel.innerHTML = window.CATALOG_ICONS.map(ic=>`<div class="icon-picker-item" data-icon-value="${ic.key}"><div class="ico">${ic.svg}</div><span>${ic.label}</span></div>`).join('');
+          wrapper.style.position='relative'; wrapper.appendChild(panel);
+          setTimeout(()=> document.addEventListener('click', outside),10);
+          panel.querySelectorAll('[data-icon-value]').forEach(item=>{
+            item.addEventListener('click', ()=>{
+              const val=item.getAttribute('data-icon-value'); hidden.value=val; if(preview){ preview.innerHTML= window.getIconSvg(val) || val; }
+              trigger.querySelector('span:last-child').textContent=val; closePanel();
+            });
+          });
+        });
+      }
+
       async function reloadCatalogPartial(){
         try {
           const r= await fetch('/catalogo'); if(!r.ok) return; const html= await r.text();
@@ -419,6 +493,8 @@
           showToast('success','Catálogo actualizado');
           // Reaplicar handlers tras refresco
           attachCrudHandlers();
+          hydrateCategoryIcons();
+          setupTileInteractions();
         } catch(e){ /* silent */ }
       }
       document.querySelectorAll('[data-open-modal]').forEach(btn=>{
@@ -437,7 +513,7 @@
               'insumo': { url:'/api/catalogo/insumos/'+id, schema:'createInsumo', endpoint:'/api/catalogo/insumos/'+id, method:'PUT' }
             };
             const cfg=map[entity]; if(!cfg) return;
-            try { const r= await fetch(cfg.url); const j= await r.json(); if(j.ok){ const data=j.data; data.__schema=cfg.schema; data.__endpoint=cfg.endpoint; data.__method=cfg.method; openModal(cfg.schema, data); setTimeout(()=>{ const box=document.querySelector('.modal-box'); if(box){ box.querySelector('h3').textContent='Editar'; const sb=box.querySelector('button[type=submit]'); if(sb) sb.textContent='Actualizar'; }},20); } else showToast('error','No encontrado'); } catch(e){ showToast('error','Error cargando'); }
+            try { const r= await fetch(cfg.url); const j=await r.json(); if(j.ok){ const data=j.data; data.__schema=cfg.schema; data.__endpoint=cfg.endpoint; data.__method=cfg.method; openModal(cfg.schema, data); setTimeout(()=>{ const box=document.querySelector('.modal-box'); if(box){ box.querySelector('h3').textContent='Editar'; const sb=box.querySelector('button[type=submit]'); if(sb) sb.textContent='Actualizar'; }},20); } else showToast('error','No encontrado'); } catch(e){ showToast('error','Error cargando'); }
           });
         });
         document.querySelectorAll('[data-delete]').forEach(b=>{

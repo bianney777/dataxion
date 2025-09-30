@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/css/gestionfinca.css">
   <script src="/js/app.js" defer></script>
+  <script src="/js/icons.js" defer></script>
 </head>
 <body>
   <%- include('partial/header') %>
@@ -57,45 +58,52 @@
 
       <div class="mb-8">
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">Cultivos <span class="live-badge">LIVE</span></h3>
-        <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3" id="cultivosGrid">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" id="cultivosGrid">
           <% categoriasCultivo.forEach(cat => { const tipos = tiposPorCategoria[cat.id_categoria] || []; %>
-            <div class="glass-card rounded-xl p-5 flex flex-col gap-3 border border-slate-200/60 relative group" data-kind="cultivo" data-name="<%= cat.nombre_categoria %>" data-entity="categoria-cultivo" data-id="<%= cat.id_categoria %>">
-              <div class="flex justify-between items-start">
-                <div>
-                  <h4 class="font-semibold text-slate-800 group-hover:text-emerald-600 transition flex items-center gap-2"><%= cat.nombre_categoria %></h4>
-                  <p class="text-[11px] text-slate-500 mt-1"><%= cat.descripcion || 'Sin descripción.' %></p>
-                </div>
-                <div class="flex flex-col items-end gap-2">
-                  <span class="status-badge status-activa"><%= tipos.length %> tipos</span>
-                  <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                    <button class="btn btn-outline btn-xs" data-edit="categoria-cultivo" data-id="<%= cat.id_categoria %>">Editar</button>
-                    <button class="btn btn-danger btn-xs" data-delete="categoria-cultivo" data-id="<%= cat.id_categoria %>">X</button>
+            <div class="catalog-tile group relative" data-kind="cultivo" data-name="<%= cat.nombre_categoria %>" data-entity="categoria-cultivo" data-id="<%= cat.id_categoria %>">
+              <div class="tile-head flex items-start gap-2">
+                <div class="tile-icon" data-icon-key="<%= cat.icono || '' %>"><%= cat.icono ? cat.icono : '🌿' %></div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex justify-between gap-2 items-start">
+                    <h4 class="tile-title"><%= cat.nombre_categoria %></h4>
+                    <span class="tile-count"><%= tipos.length %></span>
                   </div>
+                  <div class="tile-mini-desc"><%= (cat.descripcion||'').substring(0,48) %><%= (cat.descripcion||'').length>48?'...':'' %></div>
                 </div>
               </div>
-              <% if (tipos.length) { %>
-                <div class="border border-slate-200/60 rounded-lg divide-y divide-slate-200 overflow-hidden bg-white/40 backdrop-blur-sm">
-                  <% tipos.forEach(t => { %>
-                    <div class="p-3 flex flex-col gap-1 group/item" data-kind="cultivo" data-name="<%= t.nombre_tipo %>" data-entity="tipo-cultivo" data-id="<%= t.id_tipo_cultivo %>">
-                      <div class="flex justify-between items-center">
-                        <span class="text-[12px] font-semibold text-slate-700"><%= t.nombre_tipo %></span>
-                        <% if (t.nombre_cientifico) { %><span class="text-[10px] italic text-slate-500"><%= t.nombre_cientifico %></span><% } %>
-                      </div>
-                      <% if (t.descripcion) { %><p class="text-[10px] text-slate-500 leading-snug"><%= t.descripcion.substring(0,140) %><%= t.descripcion.length>140?'...':'' %></p><% } %>
-                      <div class="flex flex-wrap gap-1 mt-1">
-                        <% if (t.temporada_optima) { %><span class="metric-chip">Temporada: <%= t.temporada_optima %></span><% } %>
-                        <% if (t.dias_cosecha) { %><span class="metric-chip">Días: <%= t.dias_cosecha %></span><% } %>
-                      </div>
-                      <div class="flex gap-1 mt-1 opacity-0 group-hover/item:opacity-100 transition">
-                        <button class="btn btn-outline btn-xs" data-edit="tipo-cultivo" data-id="<%= t.id_tipo_cultivo %>">Editar</button>
-                        <button class="btn btn-danger btn-xs" data-delete="tipo-cultivo" data-id="<%= t.id_tipo_cultivo %>">X</button>
-                      </div>
+              <div class="tile-actions opacity-0 group-hover:opacity-100">
+                <button class="btn btn-outline btn-xs" data-edit="categoria-cultivo" data-id="<%= cat.id_categoria %>">Editar</button>
+                <button class="btn btn-danger btn-xs" data-delete="categoria-cultivo" data-id="<%= cat.id_categoria %>">X</button>
+              </div>
+              <div class="tile-detail" hidden>
+                <div class="tile-detail-inner">
+                  <p class="detail-desc"><%= cat.descripcion || 'Sin descripción.' %></p>
+                  <% if (tipos.length) { %>
+                    <div class="detail-section">
+                      <div class="detail-section-title">Tipos (<%= tipos.length %>)</div>
+                      <div class="mini-bars" data-bars="dias"></div>
+                      <ul class="detail-list">
+                        <% tipos.forEach(t => { %>
+                          <li class="detail-item" data-entity="tipo-cultivo" data-id="<%= t.id_tipo_cultivo %>" <%= t.dias_cosecha? 'data-dias="'+t.dias_cosecha+'"':'' %>>
+                            <div class="name-row">
+                              <span class="n"><%= t.nombre_tipo %></span>
+                              <% if (t.dias_cosecha) { %><span class="d"><%= t.dias_cosecha %> d</span><% } %>
+                            </div>
+                            <% if (t.temporada_optima) { %><div class="meta">Temporada: <%= t.temporada_optima %></div><% } %>
+                            <% if (t.descripcion) { %><div class="text"><%= t.descripcion.substring(0,120) %><%= t.descripcion.length>120?'...':'' %></div><% } %>
+                            <div class="actions">
+                              <button class="btn btn-outline btn-xs" data-edit="tipo-cultivo" data-id="<%= t.id_tipo_cultivo %>">Editar</button>
+                              <button class="btn btn-danger btn-xs" data-delete="tipo-cultivo" data-id="<%= t.id_tipo_cultivo %>">X</button>
+                            </div>
+                          </li>
+                        <% }) %>
+                      </ul>
                     </div>
-                  <% }) %>
+                  <% } else { %>
+                    <div class="text-[11px] text-slate-400">Sin tipos registrados.</div>
+                  <% } %>
                 </div>
-              <% } else { %>
-                <div class="text-[11px] text-slate-400">Sin tipos registrados.</div>
-              <% } %>
+              </div>
             </div>
           <% }) %>
         </div>
@@ -103,46 +111,69 @@
 
       <div class="mb-4">
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Insumos</h3>
-        <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3" id="insumosGrid">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" id="insumosGrid">
           <% categoriasInsumo.forEach(cat => { const insCat = insumos.filter(i=> i.id_categoria_insumo === cat.id_categoria_insumo); %>
-            <div class="glass-card rounded-xl p-5 flex flex-col gap-3 border border-slate-200/60 group" data-kind="insumo" data-name="<%= cat.nombre_categoria %>" data-entity="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">
-              <div class="flex justify-between items-start">
-                <div>
-                  <h4 class="font-semibold text-slate-800 group-hover:text-indigo-600 transition"><%= cat.nombre_categoria %></h4>
-                  <p class="text-[11px] text-slate-500 mt-1"><%= cat.descripcion || 'Sin descripción.' %></p>
-                </div>
-                <div class="flex flex-col items-end gap-2">
-                  <span class="status-badge status-activa"><%= insCat.length %> insumos</span>
-                  <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                    <button class="btn btn-outline btn-xs" data-edit="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">Editar</button>
-                    <button class="btn btn-danger btn-xs" data-delete="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">X</button>
+            <div class="catalog-tile group relative" data-kind="insumo" data-name="<%= cat.nombre_categoria %>" data-entity="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">
+              <div class="tile-head flex items-start gap-2">
+                <div class="tile-icon tile-icon-insumo" data-icon-insumo="<%= cat.tipo || '' %>">📦</div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex justify-between gap-2 items-start">
+                    <h4 class="tile-title"><%= cat.nombre_categoria %></h4>
+                    <span class="tile-count"><%= insCat.length %></span>
                   </div>
+                  <div class="tile-mini-desc"><%= (cat.descripcion||'').substring(0,48) %><%= (cat.descripcion||'').length>48?'...':'' %></div>
                 </div>
               </div>
-              <% if (insCat.length) { %>
-                <div class="border border-slate-200/60 rounded-lg divide-y divide-slate-200 overflow-hidden bg-white/40 backdrop-blur-sm">
-                  <% insCat.forEach(ins => { %>
-                    <div class="p-3 flex flex-col gap-1 group/item" data-kind="insumo" data-name="<%= ins.nombre_insumo %>" data-entity="insumo" data-id="<%= ins.id_insumo %>">
-                      <div class="flex justify-between items-center">
-                        <span class="text-[12px] font-semibold text-slate-700"><%= ins.nombre_insumo %></span>
-                        <% if (ins.fabricante) { %><span class="text-[10px] text-slate-500"><%= ins.fabricante %></span><% } %>
-                      </div>
-                      <% if (ins.descripcion) { %><p class="text-[10px] text-slate-500 leading-snug"><%= ins.descripcion.substring(0,140) %><%= ins.descripcion.length>140?'...':'' %></p><% } %>
-                      <div class="flex flex-wrap gap-1 mt-1">
-                        <% if (ins.tipo) { %><span class="metric-chip">Tipo: <%= ins.tipo %></span><% } %>
-                      </div>
-                      <div class="flex gap-1 mt-1 opacity-0 group-hover/item:opacity-100 transition">
-                        <button class="btn btn-outline btn-xs" data-edit="insumo" data-id="<%= ins.id_insumo %>">Editar</button>
-                        <button class="btn btn-danger btn-xs" data-delete="insumo" data-id="<%= ins.id_insumo %>">X</button>
-                      </div>
+              <div class="tile-actions opacity-0 group-hover:opacity-100">
+                <button class="btn btn-outline btn-xs" data-edit="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">Editar</button>
+                <button class="btn btn-danger btn-xs" data-delete="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">X</button>
+              </div>
+              <div class="tile-detail" hidden>
+                <div class="tile-detail-inner">
+                  <p class="detail-desc"><%= cat.descripcion || 'Sin descripción.' %></p>
+                  <% if (insCat.length) { %>
+                    <div class="detail-section">
+                      <div class="detail-section-title">Insumos (<%= insCat.length %>)</div>
+                      <div class="mini-bars" data-bars="insumos"></div>
+                      <ul class="detail-list">
+                        <% insCat.forEach(ins => { %>
+                          <li class="detail-item" data-entity="insumo" data-id="<%= ins.id_insumo %>" <%= ins.tipo? 'data-tipo="'+ins.tipo+'"':'' %>>
+                            <div class="name-row">
+                              <span class="n"><%= ins.nombre_insumo %></span>
+                              <% if (ins.fabricante) { %><span class="d"><%= ins.fabricante %></span><% } %>
+                            </div>
+                            <% if (ins.tipo) { %><div class="meta">Tipo: <%= ins.tipo %></div><% } %>
+                            <% if (ins.descripcion) { %><div class="text"><%= ins.descripcion.substring(0,120) %><%= ins.descripcion.length>120?'...':'' %></div><% } %>
+                            <div class="actions">
+                              <button class="btn btn-outline btn-xs" data-edit="insumo" data-id="<%= ins.id_insumo %>">Editar</button>
+                              <button class="btn btn-danger btn-xs" data-delete="insumo" data-id="<%= ins.id_insumo %>">X</button>
+                            </div>
+                          </li>
+                        <% }) %>
+                      </ul>
                     </div>
-                  <% }) %>
+                  <% } else { %>
+                    <div class="text-[11px] text-slate-400">Sin insumos registrados.</div>
+                  <% } %>
                 </div>
-              <% } else { %>
-                <div class="text-[11px] text-slate-400">Sin insumos registrados.</div>
-              <% } %>
+              </div>
             </div>
           <% }) %>
+        </div>
+      </div>
+
+      <div class="mt-10 grid gap-6 md:grid-cols-3">
+        <div class="glass-card rounded-xl p-4 border border-slate-200/60">
+          <h5 class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Leyenda Iconos Cultivo</h5>
+          <p class="text-[11px] text-slate-500 leading-relaxed">Al crear una categoría puedes elegir un icono que ayuda a reconocer visualmente el grupo (frutas, hortalizas, granos, etc.).</p>
+        </div>
+        <div class="glass-card rounded-xl p-4 border border-slate-200/60">
+          <h5 class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Agrupación</h5>
+          <p class="text-[11px] text-slate-500 leading-relaxed">Cada panel agrupa sus tipos / insumos. Pronto: colapsar / expandir cada bloque individualmente.</p>
+        </div>
+        <div class="glass-card rounded-xl p-4 border border-slate-200/60">
+          <h5 class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Atajos</h5>
+          <p class="text-[11px] text-slate-500 leading-relaxed">Usa el buscador para filtrar en vivo. Próximamente filtros por temporada, días cosecha y tipo de insumo.</p>
         </div>
       </div>
 
