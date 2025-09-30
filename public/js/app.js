@@ -290,5 +290,34 @@
     document.getElementById('exportLotesBtn')?.addEventListener('click', exportLotes);
     document.getElementById('exportLotesExcelBtn')?.addEventListener('click', exportLotesExcel);
     document.getElementById('exportLotesPdfBtn')?.addEventListener('click', exportLotesPDF);
+
+    // Catálogo agrícola (si existe la página)
+    (function catalogInit(){
+      const search = document.getElementById('catalogSearch');
+      const filter = document.getElementById('catalogFilter');
+      if(!search && !filter) return; // no estamos en catálogo
+      const cards = Array.from(document.querySelectorAll('[data-kind][data-name]'));
+      function apply(){
+        const q = (search?.value||'').toLowerCase();
+        const kind = filter?.value || '';
+        cards.forEach(c=>{
+          const name = (c.getAttribute('data-name')||'').toLowerCase();
+          const k = c.getAttribute('data-kind');
+          const matchQ = !q || name.includes(q);
+          const matchK = !kind || k===kind;
+          c.style.display = (matchQ && matchK) ? '' : 'none';
+        });
+      }
+      search && search.addEventListener('input', debounce(apply,300));
+      filter && filter.addEventListener('change', apply);
+      document.getElementById('expandAllBtn')?.addEventListener('click',()=>{
+        // Placeholder para futuro: si se agregan secciones colapsables
+        showToast('success','Todo expandido (placeholder)');
+      });
+      document.getElementById('collapseAllBtn')?.addEventListener('click',()=>{
+        showToast('success','Todo colapsado (placeholder)');
+      });
+      apply();
+    })();
   });
 })();
