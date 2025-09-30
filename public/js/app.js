@@ -32,6 +32,26 @@
   }
   window.showToast = showToast;
 
+  /* Global error instrumentation (hotfix: detectar silenciosamente errores que bloquean UI) */
+  if(!window.__GLOBAL_ERROR_MONITOR__){
+    window.__GLOBAL_ERROR_MONITOR__ = true;
+    window.addEventListener('error', (e)=>{
+      try {
+        const msg = '[JS Error] '+ (e.message || (e.error && e.error.message) || 'Error desconocido');
+        console.error(msg, e.error||e);
+        if(window.showToast) showToast('error', msg.substring(0,120));
+      } catch(_ignored){}
+    });
+    window.addEventListener('unhandledrejection', (e)=>{
+      try {
+        const reason = e.reason && (e.reason.message || e.reason.toString()) || 'Promise rejection';
+        const msg = '[Promise] '+ reason;
+        console.error(msg, e.reason);
+        if(window.showToast) showToast('error', msg.substring(0,120));
+      } catch(_ignored){}
+    });
+  }
+
   /* Debounce util */
   function debounce(fn,wait){ let t; return function(...a){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,a),wait); }; }
   window.debounce = debounce;
