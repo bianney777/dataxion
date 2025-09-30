@@ -28,21 +28,15 @@ router.get('/register', redirectIfAuth, (req, res) => {
 	res.render('register', { error: null });
 });
 
-// Verificación de cuenta (mostrar formulario si solo pending)
-router.get('/verify', (req,res,next)=>{
-	// Si viene sin code, renderizar formulario
-	if(!req.query.code){
-		return res.render('verify', { error: null, pending: !!req.query.pending });
-	}
-	return authController.verify(req,res,next);
-});
-router.post('/verify', authController.verify);
+// Verificación deshabilitada (activación automática)
+router.get('/verify', (req,res)=> res.redirect('/dashboard'));
+router.post('/verify', (req,res)=> res.redirect('/dashboard'));
 
 // Procesar formularios
 router.post('/login', authController.login);
 router.post('/register', authController.register);
 
-// API JSON para verificar código (usable desde frontend SPA/AJAX)
-router.post('/verify-code', authController.verifyCodeApi);
+// API legacy deshabilitada
+router.post('/verify-code', (req,res)=> res.status(410).json({ ok:false, message:'Verificación deshabilitada' }));
 
 module.exports = router;

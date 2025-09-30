@@ -28,12 +28,10 @@ const authController = {
         return res.status(400).render('register', { error: 'El usuario ya existe.' });
       }
   const created = await User.create({ id_rol, nombre, apellido, email: normEmail, contrasena, telefono, direccion });
-  // Enviar código de 6 dígitos
-  sendVerificationEmail(normEmail, created.tokenVerificacion).catch(err=> console.error('[mailer] error verificación:', err.message));
-      // Autologin aunque estado sea pendiente
+  // Activación inmediata: no se envía correo de verificación
       const tokenJWT = jwt.sign({ id: created.id, role: id_rol || 2 }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1h' });
       res.cookie('token', tokenJWT, { httpOnly: true });
-  return res.redirect('/auth/verify?pending=1');
+  return res.redirect('/dashboard?welcome=1');
     } catch(e){
       res.status(500).json({ ok:false, message:'Error del servidor', error: e.message });
     }
@@ -41,24 +39,14 @@ const authController = {
   async verify(req,res){
     try {
       const code = (req.query.code || req.body.code || '').trim();
-      if(!code) return res.status(400).render('verify', { error: 'Código requerido', pending:true });
-      const account = await User.verifyAccount(code);
-      if(!account) return res.status(400).send('Token inválido o cuenta ya verificada');
-      // Emitir JWT inmediato (autologin tras verificación).
-      const sessionToken = jwt.sign({ id: account.id, role: account.role }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1h' });
-      res.cookie('token', sessionToken, { httpOnly: true });
-      res.redirect('/dashboard?activated=1&autologin=1');
+      // Verificación ya no necesaria
+      return res.redirect('/dashboard');
     } catch(e){ res.status(500).send('Error verificando cuenta'); }
   },
   async verifyCodeApi(req,res){
     try {
       const { code } = req.body || {};
-      if(!code || !/^\d{6}$/.test(code)) return res.status(400).json({ ok:false, message:'Código inválido' });
-      const account = await User.verifyAccount(code.trim());
-      if(!account) return res.status(400).json({ ok:false, message:'Código incorrecto o ya utilizado' });
-      const sessionToken = jwt.sign({ id: account.id, role: account.role }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1h' });
-      res.cookie('token', sessionToken, { httpOnly: true });
-      return res.json({ ok:true, activated:true });
+  return res.status(400).json({ ok:false, message:'La verificación por código está deshabilitada' });
     } catch(e){
       console.error('[verifyCodeApi] error', e);
       res.status(500).json({ ok:false, message:'Error interno' });
