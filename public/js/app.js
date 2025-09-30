@@ -317,36 +317,70 @@
       function setupTileInteractions(){
         const tiles = document.querySelectorAll('.catalog-tile');
         tiles.forEach(tile=>{
-          const detail = tile.querySelector('.tile-detail');
           tile.addEventListener('click', (e)=>{
-            if(e.target.closest('.tile-actions') || e.target.closest('button[data-edit]') || e.target.closest('button[data-delete]')) return; // ignore action clicks
-            const expanded = !detail.hasAttribute('hidden');
-            document.querySelectorAll('.catalog-tile .tile-detail:not([hidden])').forEach(d=>{ if(d!==detail) d.setAttribute('hidden',''); });
-            document.querySelectorAll('.catalog-tile.expanded').forEach(t=> t.classList.remove('expanded'));
-            if(expanded){ detail.setAttribute('hidden',''); }
-            else { tile.classList.add('expanded'); detail.removeAttribute('hidden'); renderMiniBars(detail); }
+            if(e.target.closest('.tile-actions') || e.target.closest('button[data-edit]') || e.target.closest('button[data-delete]')) return;
+            openQuickView(tile);
           });
         });
       }
-      function renderMiniBars(scope){
-        scope.querySelectorAll('.mini-bars').forEach(barWrap=>{
-          const mode = barWrap.getAttribute('data-bars');
-          if(mode==='dias'){
-            const items = Array.from(scope.querySelectorAll('.detail-item[data-dias]'));
-            if(!items.length){ barWrap.innerHTML='<div class="tile-chart-placeholder">Sin datos de días</div>'; return; }
-            const vals = items.map(i=> parseInt(i.getAttribute('data-dias'))).filter(n=>!isNaN(n));
-            if(!vals.length){ barWrap.innerHTML='<div class="tile-chart-placeholder">Sin datos válidos</div>'; return; }
-            const max = Math.max(...vals);
-            barWrap.innerHTML = vals.map(v=> `<div class="bar" style="height:${(v/max)*100}%" data-v="${v}"></div>`).join('');
-          } else if(mode==='insumos'){
-            const items = Array.from(scope.querySelectorAll('.detail-item'));
-            const count = items.length; if(!count){ barWrap.innerHTML='<div class="tile-chart-placeholder">Vacío</div>'; return; }
-            barWrap.innerHTML = '<div class="bar" style="height:100%" data-v="'+count+'"></div>';
-          }
+      function openQuickView(tile){
+        const existing = document.getElementById('quickViewOverlay');
+        if(existing) existing.remove();
+        const id = tile.getAttribute('data-id');
+        const kind = tile.getAttribute('data-kind');
+        const title = tile.querySelector('.tile-title')?.textContent || '';
+        const iconKey = tile.querySelector('.tile-icon')?.getAttribute('data-icon-key') || '';
+        const iconRaw = iconKey && window.getIconSvg ? window.getIconSvg(iconKey) : (tile.querySelector('.tile-icon')?.innerHTML || '🌿');
+        const detailSource = tile.querySelector('.tile-detail-inner');
+        let inner = '';
+        if(detailSource){ inner = detailSource.innerHTML; }
+        else { inner = '<p class="detail-desc">Sin detalle disponible.</p>'; }
+        // métricas simples (ej: promedio días)
+        let avgDias = null; const diasVals=[];
+        tile.querySelectorAll('.detail-item[data-dias]').forEach(li=>{ const v=parseInt(li.getAttribute('data-dias')); if(!isNaN(v)) diasVals.push(v); });
+        if(diasVals.length){ avgDias = Math.round(diasVals.reduce((a,b)=>a+b,0)/diasVals.length); }
+        const overlay = document.createElement('div');
+        overlay.id='quickViewOverlay';
+        overlay.className='quick-view-overlay';
+        overlay.innerHTML = `<div class="quick-view-panel animate-in">
+          <div class="qv-header">
+            <div class="qv-icon">${iconRaw}</div>
+            <div class="qv-titles">
+              <h3>${title}</h3>
+              <div class="qv-sub">${kind==='cultivo' ? 'Categoría de Cultivo' : 'Categoría de Insumo'} • ID ${id}</div>
+            </div>
+            <button type="button" class="qv-close" aria-label="Cerrar">&times;</button>
+          </div>
+          <div class="qv-body">${inner}</div>
+          <div class="qv-metrics">${avgDias? `<div class='metric-box'><span class='label'>Promedio días cosecha</span><span class='val'>${avgDias}</span></div>`:''}</div>
+          <div class="qv-footer flex justify-end gap-2">
+            <button class="btn btn-outline btn-sm" data-qv-edit>Editar</button>
+            <button class="btn btn-danger btn-sm" data-qv-delete>Eliminar</button>
+          </div>
+        </div>`;
+        document.body.appendChild(overlay);
+        document.body.style.overflow='hidden';
+        const close = ()=>{ overlay.remove(); document.body.style.overflow=''; };
+        overlay.addEventListener('click', e=>{ if(e.target===overlay || e.target.classList.contains('qv-close')) close(); });
+        // acciones editar/eliminar reutilizando handlers existentes
+        overlay.querySelector('[data-qv-edit]')?.addEventListener('click', ()=>{
+          const entity = tile.getAttribute('data-entity');
+          const editBtn = tile.querySelector(`[data-edit='${entity}']`);
+          if(editBtn){ editBtn.click(); close(); }
+        });
+        overlay.querySelector('[data-qv-delete]')?.addEventListener('click', ()=>{
+          const entity = tile.getAttribute('data-entity');
+            const delBtn = tile.querySelector(`[data-delete='${entity}']`);
+            if(delBtn){ delBtn.click(); close(); }
         });
       }
-      // call interactions after initial paint
+      // initial calls
       setupTileInteractions();
+      // patch reload to re-bind (monkey patch existing function if present later)
+      const origReload = window.reloadCatalogPartial;
+      if(typeof origReload === 'function'){
+        window.reloadCatalogPartial = async function(){ await origReload(); setupTileInteractions(); };
+      }
       function hydrateCategoryIcons(){
         if(!window.CATALOG_ICONS || !window.getIconSvg) return;
         document.querySelectorAll('.cat-icon-bubble[data-icon-key]').forEach(el=>{
