@@ -8,8 +8,8 @@ const { connectDB } = require('./config/db');
 // Load env vars
 dotenv.config();
 
-// Connect to database
-connectDB();
+// Connect to database (will retry internally); we await inside a bootstrap function below
+// connectDB(); (moved)
 
 const app = express();
 
@@ -17,6 +17,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
+console.log('[bootstrap] Middlewares base cargados');
 
 // Rutas API principales
 app.use('/api/auth', require('./routes/auth'));
@@ -47,7 +48,8 @@ app.use((req, res, next) => {
 
 // Página de inicio
 app.get('/', (req, res) => {
-  const token = req.cookies?.token;
+  var token = null;
+  if (req.cookies && req.cookies.token) token = req.cookies.token;
   if (token) {
     const jwt = require('jsonwebtoken');
     try {
@@ -82,6 +84,10 @@ app.locals.brand = {
 
 // Rutas protegidas
 app.get('/dashboard', ensureAuthenticated, (req, res) => {
+  // Debug registro de query
+  if (req.query && Object.keys(req.query).length) {
+    console.log('[debug] Dashboard query params:', req.query);
+  }
   res.render('dashboard', { user: req.user || null });
 });
 
@@ -106,12 +112,39 @@ app.get('/logout', (req, res) => {
   res.redirect('/auth/login');
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+async function bootstrap(){
+  console.log('[bootstrap] Starting DataXion server...');
+  try {
+    await connectDB();
+    console.log('[bootstrap] DB init step finished (may still be disconnected if retries exhausted).');
+    const PORT = process.env.PORT || 5000;
+    const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    server.on('error', (err)=>{
+      console.error('[bootstrap] HTTP server error:', err);
+      process.exit(1);
+    });
+  } catch(e){
+    console.error('[bootstrap] Fatal during startup:', e);
+    process.exit(1);
+  }
+}
+
+bootstrap();
 
 process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Rejection:', reason);
 });
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
+});
+
+// Middleware de manejo de errores al final
+app.use((err, req, res, next) => {
+  console.error('[express-error] ', err.stack || err);
+  if (res.headersSent) return next(err);
+  try {
+    res.status(500).send('Error interno del servidor');
+  } catch(_) {
+    // ignore
+  }
 });

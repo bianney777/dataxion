@@ -2,7 +2,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { sendVerificationEmail } = require('../modules/mailer');
+// Verificación por correo deshabilitada
 
 const authController = {
   async register(req,res){
@@ -27,11 +27,11 @@ const authController = {
       if(existing){
         return res.status(400).render('register', { error: 'El usuario ya existe.' });
       }
-  const created = await User.create({ id_rol, nombre, apellido, email: normEmail, contrasena, telefono, direccion });
-  // Activación inmediata: no se envía correo de verificación
+      const created = await User.create({ id_rol, nombre, apellido, email: normEmail, contrasena, telefono, direccion });
+      // Activación inmediata: no se envía correo de verificación
       const tokenJWT = jwt.sign({ id: created.id, role: id_rol || 2 }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1h' });
       res.cookie('token', tokenJWT, { httpOnly: true });
-  return res.redirect('/dashboard?welcome=1');
+      return res.redirect('/dashboard?welcome=1');
     } catch(e){
       res.status(500).json({ ok:false, message:'Error del servidor', error: e.message });
     }
@@ -64,7 +64,7 @@ const authController = {
       const token = jwt.sign({ id: user.id_usuario, role: user.id_rol }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1h' });
       res.cookie('token', token, { httpOnly: true });
       // Si pendiente, dashboard mostrará aviso si lee query param (podemos agregar banner allí)
-      res.redirect('/dashboard' + (user.estado === 'pendiente' ? '?pending=1' : ''));
+  res.redirect('/dashboard');
     } catch(e){
       res.status(500).render('login', { error: 'Error interno del servidor.' });
     }
