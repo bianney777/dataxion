@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Finca</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.0/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/css/gestionfinca.css">
+  <script src="/js/app.js" defer></script>
+</head>
+<body>
+  <%- include('partial/header') %>
+  <div class="layout">
+    <%- include('partial/sidebar') %>
+    <div class="feed">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 text-transparent bg-clip-text tracking-tight">Gestión de Finca</h2>
+      <div class="hidden md:flex gap-2">
+        <span class="metric-chip">Total fincas: <%= (fincas && fincas.length) || 0 %></span>
+        <% if (selectedFinca && lotes) { %><span class="metric-chip">Lotes: <%= lotes.length %></span><% } %>
+      </div>
+    </div>
+    <p class="mb-4 text-gray-600">Aquí podrás gestionar tus fincas y lotes.</p>
+
+
+    <!-- Formulario para crear o editar finca -->
+    <% if (selectedFinca && selectedFinca.id_finca) { %>
+      <div class="section-header">
+        <h3 class="pill-title"><svg xmlns="http://www.w3.org/2000/svg" class="card-title-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l3.5 3.5"/></svg> Editar finca</h3>
+        <span class="metric-chip"><svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h3m12 0h3M12 3v3m0 12v3"/></svg>ID <%= selectedFinca.id_finca %></span>
+      </div>
+      <div class="gradient-bar"></div>
+      <form action="/gestionfinca/<%= selectedFinca.id_finca %>/update" method="POST" class="mb-10 glass-card rounded-xl p-6">
+        <div class="form-grid">
+          <div class="input-group floating">
+            <input type="text" name="nombre_finca" value="<%= selectedFinca.nombre_finca %>" required>
+            <label class="animated-label">Nombre de la finca</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2l9 4-9 4-9-4 9-4zm0 8l9 4-9 4-9-4 9-4zm0 8l9 4-9 4-9-4 9-4z"/></svg></span>
+            <div class="field-hint"><svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01"/></svg>Nombre visible en reportes.</div>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.0001" name="area_total" value="<%= selectedFinca.area_total %>" required>
+            <label>Área total (ha)</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/></svg></span>
+            <div class="field-hint">Formato decimal: 25.5</div>
+          </div>
+          <div class="input-group floating">
+            <input type="text" name="ubicacion" value="<%= selectedFinca.ubicacion %>">
+            <label>Ubicación</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 8c0 7.5-7.5 13.5-7.5 13.5S4.5 15.5 4.5 8a7.5 7.5 0 1115 0z"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.00000001" name="latitud" value="<%= selectedFinca.latitud %>">
+            <label>Latitud</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 008.6 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 8.6a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10c.83 0 1.5.67 1.5 1.5S20.23 15 19.4 15z"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.00000001" name="longitud" value="<%= selectedFinca.longitud %>">
+            <label>Longitud</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.01" name="altitud" value="<%= selectedFinca.altitud %>">
+            <label>Altitud (m)</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2l4 7h-8l4-7zm0 20V9"/></svg></span>
+          </div>
+          <div class="input-group floating col-span-2">
+            <textarea name="descripcion"><%= selectedFinca.descripcion %></textarea>
+            <label>Descripción</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16h6M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+          </div>
+          <div class="input-group floating select-wrapper">
+            <select name="estado">
+              <option value="activa" <%= selectedFinca.estado==='activa'?'selected':'' %>>Activa</option>
+              <option value="inactiva" <%= selectedFinca.estado==='inactiva'?'selected':'' %>>Inactiva</option>
+              <option value="en_planificacion" <%= selectedFinca.estado==='en_planificacion'?'selected':'' %>>En planificación</option>
+            </select>
+            <label>Estado</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></span>
+          </div>
+          <div class="input-group floating select-wrapper">
+            <select name="id_zona" required>
+              <option value="" disabled <%= !selectedFinca.id_zona ? 'selected' : '' %>>Selecciona zona</option>
+              <% if (typeof zonas !== 'undefined' && zonas && zonas.length) { zonas.forEach(z => { %>
+                <option value="<%= z.id_zona %>" <%= z.id_zona === selectedFinca.id_zona ? 'selected' : '' %>><%= z.nombre_zona %> (<%= z.region || z.pais || '' %>)</option>
+              <% }) } %>
+            </select>
+            <label>Zona geográfica</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></span>
+            <div class="field-hint">Selecciona la zona agroclimática.</div>
+          </div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="submit" class="btn btn-gradient btn-sm">Guardar cambios</button>
+          <a href="/gestionfinca" class="btn btn-outline btn-sm">Cancelar</a>
+        </div>
+      </form>
+    <% } else { %>
+      <div class="section-header">
+  <h3 class="pill-title"><svg xmlns="http://www.w3.org/2000/svg" class="card-title-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7l9 4 9-4M5 10v6a2 2 0 002 2h2m8-8v6a2 2 0 01-2 2h-2m-6 0h6"/></svg> Registrar finca</h3>
+        <span class="live-badge"><svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>ACTIVO</span>
+      </div>
+      <div class="gradient-bar"></div>
+      <form action="/gestionfinca/create" method="POST" class="mb-10 glass-card rounded-xl p-6">
+        <div class="form-grid">
+          <div class="input-group floating">
+            <input type="text" name="nombre_finca" required>
+            <label>Nombre de la finca</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2l9 4-9 4-9-4 9-4zm0 8l9 4-9 4-9-4 9-4zm0 8l9 4-9 4-9-4 9-4z"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.0001" name="area_total" required>
+            <label>Área total (ha)</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="text" name="ubicacion">
+            <label>Ubicación</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 8c0 7.5-7.5 13.5-7.5 13.5S4.5 15.5 4.5 8a7.5 7.5 0 1115 0z"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.00000001" name="latitud">
+            <label>Latitud</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 008.6 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 8.6a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10c.83 0 1.5.67 1.5 1.5S20.23 15 19.4 15z"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.00000001" name="longitud">
+            <label>Longitud</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.01" name="altitud">
+            <label>Altitud (m)</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2l4 7h-8l4-7zm0 20V9"/></svg></span>
+          </div>
+          <div class="input-group floating col-span-2">
+            <textarea name="descripcion"></textarea>
+            <label>Descripción</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16h6M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+          </div>
+          <div class="input-group floating select-wrapper">
+            <select name="estado">
+              <option value="activa">Activa</option>
+              <option value="inactiva">Inactiva</option>
+              <option value="en_planificacion">En planificación</option>
+            </select>
+            <label>Estado</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></span>
+          </div>
+          <div class="input-group floating select-wrapper">
+            <select name="id_zona" required>
+              <option value="" disabled selected>Selecciona zona</option>
+              <% if (typeof zonas !== 'undefined' && zonas && zonas.length) { zonas.forEach(z => { %>
+                <option value="<%= z.id_zona %>"><%= z.nombre_zona %> (<%= z.region || z.pais || '' %>)</option>
+              <% }) } %>
+            </select>
+            <label>Zona geográfica</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></span>
+          </div>
+        </div>
+        <div class="flex gap-4 pt-2 items-center">
+          <button type="submit" class="btn btn-gradient btn-sm">Registrar Finca</button>
+          <span class="text-[11px] text-slate-500 font-medium hidden md:inline">Completa los campos obligatorios *</span>
+        </div>
+      </form>
+    <% } %>
+
+    <!-- Listado de fincas -->
+    <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-3">
+      <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-3">Mis fincas
+      <select id="filterEstado" class="text-[11px] font-medium bg-slate-100 border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-blue-200">
+        <option value="">Todos</option>
+        <option value="activa">Activas</option>
+        <option value="inactiva">Inactivas</option>
+        <option value="en_planificacion">Planificación</option>
+      </select></h3>
+      <div class="flex flex-wrap gap-2">
+        <button id="exportFincasBtn" class="btn btn-xs btn-outline">CSV</button>
+        <button id="exportFincasExcelBtn" class="btn btn-xs btn-success">Excel</button>
+        <button id="exportFincasPdfBtn" class="btn btn-xs btn-danger">PDF</button>
+      </div>
+    </div>
+    <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3 mb-10" data-fincas-container>
+      <% if (fincas && fincas.length) { fincas.forEach(finca => { %>
+        <%- '' %>
+      <% }) } else { %>
+        <div class="text-center text-sm text-slate-500 col-span-full">(Se cargará dinámicamente)</div>
+      <% } %>
+    </div>
+    <div data-fincas-pagination class="mb-10"></div>
+
+    <!-- Si hay lotes, mostrar listado y formulario -->
+    <% if (selectedFinca) { %>
+      <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mt-2 mb-3">
+        <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-3">Lotes de la finca
+        </h3>
+        <div class="flex flex-wrap gap-2">
+          <button id="exportLotesBtn" class="btn btn-xs btn-outline">CSV</button>
+          <button id="exportLotesExcelBtn" class="btn btn-xs btn-success">Excel</button>
+          <button id="exportLotesPdfBtn" class="btn btn-xs btn-danger">PDF</button>
+        </div>
+      </div>
+  <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3 mb-4" data-lotes-container data-id-finca="<%= selectedFinca.id_finca || selectedFinca %>">
+        <% if (lotes && lotes.length) { lotes.forEach(l => { %>
+          <%- '' %>
+        <% }) } else { %>
+          <div class="text-center text-sm text-slate-500 col-span-full">(Se cargará dinámicamente)</div>
+        <% } %>
+      </div>
+      <div data-lotes-pagination class="mb-10"></div>
+    <% } %>
+
+    <!-- Formulario para crear o editar lote -->
+    <% if (selectedLote && selectedLote.id_lote) { %>
+      <div class="section-header">
+        <h3 class="pill-title"><svg xmlns="http://www.w3.org/2000/svg" class="card-title-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m4-4H8"/></svg> Editar lote</h3>
+        <span class="metric-chip">ID LOTE <%= selectedLote.id_lote %></span>
+      </div>
+      <div class="gradient-bar"></div>
+      <form action="/gestionfinca/lotes/<%= selectedLote.id_lote %>/update" method="POST" class="mb-10 glass-card rounded-xl p-6">
+        <div class="form-grid">
+          <input type="hidden" name="id_finca" value="<%= selectedLote.id_finca %>">
+          <div class="input-group floating">
+            <input type="text" name="nombre_lote" value="<%= selectedLote.nombre_lote %>" required>
+            <label>Nombre del lote</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m4-4H8"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.0001" name="area" value="<%= selectedLote.area %>" required>
+            <label>Área (ha)</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="text" name="coordenadas" value="<%= selectedLote.coordenadas %>">
+            <label>Coordenadas</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l7.89 7.89a3 3 0 004.24 0L23 3"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7l-4 4 8 8 4-4M17 17l4-4-8-8-4 4"/></svg></span>
+          </div>
+          <div class="input-group floating col-span-2">
+            <textarea name="descripcion"><%= selectedLote.descripcion %></textarea>
+            <label>Descripción</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16h6M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+          </div>
+          <div class="input-group floating select-wrapper">
+            <select name="tipo_suelo">
+              <option value="arcilloso" <%= selectedLote.tipo_suelo==='arcilloso'?'selected':'' %>>Arcilloso</option>
+              <option value="limoso" <%= selectedLote.tipo_suelo==='limoso'?'selected':'' %>>Limoso</option>
+              <option value="arenoso" <%= selectedLote.tipo_suelo==='arenoso'?'selected':'' %>>Arenoso</option>
+              <option value="franco" <%= selectedLote.tipo_suelo==='franco'?'selected':'' %>>Franco</option>
+              <option value="otros" <%= selectedLote.tipo_suelo==='otros'?'selected':'' %>>Otros</option>
+            </select>
+            <label>Tipo de suelo</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.1" name="ph_suelo" value="<%= selectedLote.ph_suelo %>" id="phInputEdit">
+            <label>pH</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 1.343-3 3v7m6 0v-7c0-1.657-1.343-3-3-3z"/></svg></span>
+            <div class="ph-indicator"><div class="ph-pointer" id="phPointerEdit" style="left:50%"></div></div>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.01" name="capacidad_agua" value="<%= selectedLote.capacidad_agua %>">
+            <label>Capacidad agua</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+          </div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="submit" class="btn-modern bg-green-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-green-700 active:scale-[.98] transition">Guardar cambios</button>
+          <a href="/gestionfinca/<%= selectedLote.id_finca %>/lotes" class="btn-modern bg-slate-200 text-slate-800 px-5 py-2.5 rounded-lg font-medium hover:bg-slate-300 active:scale-[.98] transition">Cancelar</a>
+        </div>
+      </form>
+    <% } else if (selectedFinca) { %>
+      <div class="section-header">
+        <h3 class="pill-title"><svg xmlns="http://www.w3.org/2000/svg" class="card-title-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m4-4H8"/></svg> Registrar lote</h3>
+        <span class="metric-chip">Finca <%= (selectedFinca.nombre_finca || selectedFinca) %></span>
+      </div>
+      <div class="gradient-bar"></div>
+      <form action="/gestionfinca/lotes/create" method="POST" class="mb-10 glass-card rounded-xl p-6">
+        <div class="form-grid">
+          <input type="hidden" name="id_finca" value="<%= selectedFinca.id_finca || selectedFinca %>">
+          <div class="input-group floating">
+            <input type="text" name="nombre_lote" required>
+            <label>Nombre del lote</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m4-4H8"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.0001" name="area" required>
+            <label>Área (ha)</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="text" name="coordenadas">
+            <label>Coordenadas</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l7.89 7.89a3 3 0 004.24 0L23 3"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7l-4 4 8 8 4-4M17 17l4-4-8-8-4 4"/></svg></span>
+          </div>
+          <div class="input-group floating col-span-2">
+            <textarea name="descripcion"></textarea>
+            <label>Descripción</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16h6M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+          </div>
+          <div class="input-group floating select-wrapper">
+            <select name="tipo_suelo">
+              <option value="arcilloso">Arcilloso</option>
+              <option value="limoso">Limoso</option>
+              <option value="arenoso">Arenoso</option>
+              <option value="franco">Franco</option>
+              <option value="otros">Otros</option>
+            </select>
+            <label>Tipo de suelo</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg></span>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.1" name="ph_suelo" id="phInputNew">
+            <label>pH</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 1.343-3 3v7m6 0v-7c0-1.657-1.343-3-3-3z"/></svg></span>
+            <div class="ph-indicator"><div class="ph-pointer" id="phPointerNew" style="left:50%"></div></div>
+          </div>
+          <div class="input-group floating">
+            <input type="number" step="0.01" name="capacidad_agua">
+            <label>Capacidad agua</label>
+            <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+          </div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="submit" class="btn-modern bg-green-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-green-700 active:scale-[.98] transition">Registrar Lote</button>
+        </div>
+      </form>
+    <% } %>
+    </div>
+    <aside class="rightbar">
+      <div class="right-card">
+        <h4 class="text-xs font-semibold tracking-wider text-slate-500 uppercase">Métricas rápidas</h4>
+        <div class="text-[11px] flex flex-col gap-1">
+          <div>Total fincas: <span id="metricTotalFincas"><%= (fincas && fincas.length) || 0 %></span></div>
+          <div>Área acumulada: <span id="metricAreaTotal">—</span></div>
+          <div>% Activas: <span id="metricActivas">—</span></div>
+          <div>pH promedio: <span id="metricPh">—</span></div>
+        </div>
+      </div>
+      <div class="right-card">
+        <h4 class="text-xs font-semibold tracking-wider text-slate-500 uppercase">Atajos</h4>
+        <button class="btn-modern bg-blue-600 text-white px-3 py-2 rounded-md text-xs font-medium hover:bg-blue-700" onclick="scrollTo(0,0)">Ir arriba</button>
+      </div>
+    </aside>
+  </div>
+  <script>
+    function updatePhPointer(inputId, pointerId){
+      const input = document.getElementById(inputId);
+      const pointer = document.getElementById(pointerId);
+      if(!input || !pointer) return;
+      const val = parseFloat(input.value);
+      if(isNaN(val)){ pointer.style.left = '50%'; return; }
+      const clamped = Math.max(0, Math.min(14, val));
+      const percent = (clamped/14)*100;
+      pointer.style.left = percent + '%';
+    }
+    ['phInputEdit','phInputNew'].forEach((id)=>{
+      const el = document.getElementById(id);
+      if(el){
+        el.addEventListener('input', ()=>{
+          updatePhPointer(id, id==='phInputEdit' ? 'phPointerEdit':'phPointerNew');
+        });
+        updatePhPointer(id, id==='phInputEdit' ? 'phPointerEdit':'phPointerNew');
+      }
+    });
+  </script>
+  <%- include('partial/footer') %>
+  <div id="exportProgress" class="hidden">
+    <div class="label"><span>Exportando</span><span class="percent"></span></div>
+    <div class="track"><div class="bar"></div></div>
+  </div>
+  <!-- Librerías externas para export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+</body>
+</html>

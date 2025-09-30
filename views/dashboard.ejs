@@ -1,0 +1,65 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <%- include('partial/header') %>
+  <div class="layout">
+    <%- include('partial/sidebar') %>
+    <main class="feed">
+      <section class="card animate-in" style="max-width:780px; margin:0 auto 34px;">
+        <h2 style="font-size:2rem; letter-spacing:-1px; background:linear-gradient(90deg,#2563eb,#16a34a); -webkit-background-clip:text; background-clip:text; color:transparent;">Bienvenido</h2>
+        <p style="color:#475569; font-size:.95rem; line-height:1.5; margin-bottom:22px;">Accede a la gestión de fincas y lotes desde el menú lateral o el botón rápido.</p>
+        <a href="/gestionfinca" class="btn">Ir a Gestión de Fincas</a>
+      </section>
+      <section class="grid" style="display:grid; gap:22px; grid-template-columns:repeat(auto-fill,minmax(260px,1fr));">
+        <div class="card animate-in" style="animation-delay:.05s;">
+          <h3 style="font-size:1rem;">Resumen rápido</h3>
+          <ul style="list-style:none; padding:0; margin:0; font-size:.8rem; color:#475569; display:flex; flex-direction:column; gap:6px;">
+            <li>Total de usuarios: <strong>—</strong></li>
+            <li>Fincas registradas: <strong id="dashFincas">—</strong></li>
+            <li>Lotes totales: <strong id="dashLotes">—</strong></li>
+          </ul>
+        </div>
+        <div class="card animate-in" style="animation-delay:.1s;">
+          <h3 style="font-size:1rem;">Actividad</h3>
+          <p style="font-size:.75rem; color:#64748b;">Próximamente verás actividad reciente del sistema.</p>
+        </div>
+        <div class="card animate-in" style="animation-delay:.15s;">
+          <h3 style="font-size:1rem;">Estado</h3>
+          <p style="font-size:.75rem; color:#64748b;">Integraciones y servicios externos OK.</p>
+        </div>
+      </section>
+    </main>
+    <aside class="rightbar">
+      <div class="right-card">
+        <h4 class="text-xs font-semibold tracking-wider" style="text-transform:uppercase; font-size:.65rem; letter-spacing:.08em; color:#64748b;">Accesos rápidos</h4>
+        <a href="/gestionfinca" class="btn" style="width:100%;">Gestión de Fincas</a>
+      </div>
+      <div class="right-card">
+        <h4 class="text-xs font-semibold tracking-wider" style="text-transform:uppercase; font-size:.65rem; letter-spacing:.08em; color:#64748b;">Tema</h4>
+        <button id="toggleThemeDash" class="btn-outline btn" style="width:100%;">Alternar Tema</button>
+      </div>
+    </aside>
+  </div>
+  <script>
+    // Theme toggle reutilizable si ya existe toggleTheme en otras vistas
+    const root = document.documentElement;
+    function applyStoredTheme(){
+      const t = localStorage.getItem('theme');
+      if(t==='dark'){ root.classList.add('dark'); }
+      else { root.classList.remove('dark'); }
+    }
+    applyStoredTheme();
+    document.getElementById('toggleThemeDash')?.addEventListener('click', ()=>{
+      const isDark = root.classList.toggle('dark');
+      localStorage.setItem('theme', isDark? 'dark':'light');
+    });
+  </script>
+</body>
+</html>

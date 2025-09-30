@@ -1,0 +1,50 @@
+/* Estilos específicos adicionales para gestionfinca (sobre el layout global) */
+/* Ajuste de feed interno si se necesita espaciar formularios largos */
+.feed .glass-card + .glass-card { margin-top:24px; }
+/* Utilidades modernas */
+.glass-card { background:rgba(255,255,255,0.75); backdrop-filter:blur(10px); box-shadow:0 4px 20px -2px rgba(0,0,0,0.08); border:1px solid rgba(255,255,255,0.6); }
+.input-group { position:relative; }
+.input-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); pointer-events:none; color:#2563eb; display:flex; opacity:.85; }
+.floating { padding-top:18px; }
+.floating input, .floating textarea, .floating select { width:100%; background:rgba(255,255,255,0.9); border:1px solid #d1d5db; border-radius:8px; padding:10px 12px 8px 42px; font-size:0.9rem; transition:.25s; }
+.floating textarea { min-height:90px; resize:vertical; }
+.floating select { appearance:none; }
+.floating label { position:absolute; left:42px; top:14px; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600; color:#2563eb; pointer-events:none; transition:.25s; }
+.floating input:focus, .floating textarea:focus, .floating select:focus { outline:none; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.15); }
+.floating input:focus + label, .floating textarea:focus + label, .floating select:focus + label { color:#1d4ed8; }
+.field-hint { font-size:.65rem; color:#64748b; margin-top:4px; padding-left:42px; display:flex; align-items:center; gap:4px; }
+.pill-title { font-size:.7rem; font-weight:600; letter-spacing:.06em; color:#475569; background:#e2e8f0; padding:4px 10px; border-radius:999px; display:inline-flex; align-items:center; gap:6px; }
+.section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+gradient-bar { height:4px; width:100%; }
+.gradient-bar { height:4px; width:100%; background:linear-gradient(90deg,#2563eb,#22c55e,#f59e0b); border-radius:2px; margin:18px 0 28px; position:relative; overflow:hidden; }
+.gradient-bar::after { content:""; position:absolute; left:-20%; top:0; height:100%; width:20%; background:rgba(255,255,255,0.5); animation:slide 3s linear infinite; }
+@keyframes slide { 0% { left:-20%; } 100% { left:120%; } }
+.btn-modern { position:relative; overflow:hidden; }
+.btn-modern::after { content:""; position:absolute; inset:0; background:linear-gradient(120deg,rgba(255,255,255,0.15),rgba(255,255,255,0)); transform:translateX(-100%); transition:.45s; }
+.btn-modern:hover::after { transform:translateX(0); }
+.status-badge { font-size:.65rem; font-weight:600; padding:4px 10px; border-radius:999px; text-transform:uppercase; letter-spacing:.05em; }
+.status-activa { background:#dcfce7; color:#166534; }
+.status-inactiva { background:#fee2e2; color:#991b1b; }
+.status-en_planificacion { background:#fef9c3; color:#92400e; }
+.ph-indicator { height:10px; width:100%; border-radius:6px; background:linear-gradient(90deg,#7f1d1d,#b91c1c,#f97316,#facc15,#84cc16,#10b981,#0ea5e9,#6366f1,#7e22ce); position:relative; margin-top:6px; }
+.ph-pointer { position:absolute; top:50%; transform:translate(-50%,-50%); width:14px; height:14px; border:2px solid #fff; border-radius:50%; background:#0f172a; box-shadow:0 0 0 2px rgba(0,0,0,0.3); transition:.3s; }
+.card-title-icon { width:16px; height:16px; color:#2563eb; opacity:.9; }
+.divider-soft { height:1px; background:linear-gradient(90deg,transparent,#cbd5e1,transparent); margin:14px 0 6px; }
+.animated-label { animation:fadeIn .4s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(4px);} to { opacity:1; transform:translateY(0);} }
+.form-grid { display:grid; gap:18px; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); }
+.select-wrapper { position:relative; }
+.select-wrapper:after { content:"▾"; position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:.8rem; color:#475569; pointer-events:none; }
+.metric-chip { background:#f1f5f9; font-size:.65rem; font-weight:500; padding:3px 8px; border-radius:6px; color:#1e293b; display:inline-flex; gap:4px; align-items:center; }
+.live-badge { background:#dcfce7; color:#166534; font-weight:600; font-size:.6rem; padding:3px 6px; border-radius:6px; display:inline-flex; gap:4px; align-items:center; }
+/* Dark mode: seguir clase html.dark ya declarada globalmente */
+html.dark .glass-card { background:rgba(30,41,59,0.55); border-color:rgba(255,255,255,0.08); }
+html.dark .floating input, html.dark .floating textarea, html.dark .floating select { background:rgba(30,41,59,0.7); border-color:#334155; color:#e2e8f0; }
+html.dark .floating label { color:#60a5fa; }
+html.dark .field-hint { color:#94a3b8; }
+html.dark .pill-title { background:#1e293b; color:#cbd5e1; }
+html.dark .metric-chip { background:#1e293b; color:#cbd5e1; }
+html.dark .live-badge { background:#14532d; color:#bbf7d0; }
+html.dark .status-activa { background:#166534; color:#dcfce7; }
+html.dark .status-inactiva { background:#7f1d1d; color:#fee2e2; }
+html.dark .status-en_planificacion { background:#92400e; color:#fef9c3; }

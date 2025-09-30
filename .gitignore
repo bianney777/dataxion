@@ -1,0 +1,37 @@
+# Node / Express base ignore
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env & secrets
+.env
+.env.*
+
+# Logs
+logs/
+*.log
+logs.txt
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Coverage / builds
+coverage/
+dist/
+build/
+
+# Editor
+.vscode/
+.idea/
+
+# Runtime temp
+tmp/
+temp/
+
+# Optional lockfiles (keep one if desired)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml

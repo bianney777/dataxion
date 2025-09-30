@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Inicio - Dataxion</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-box animate-in">
+      <div>
+        <h1>Dataxion</h1>
+        <p style="font-size:.8rem; color:#475569; line-height:1.4; margin:4px 0 14px;">Gestión integral de fincas y lotes con una interfaz moderna e intuitiva.</p>
+      </div>
+      <div class="form-actions">
+        <a href="/auth/login" class="btn" style="width:100%;">Iniciar Sesión</a>
+        <a href="/auth/register" class="btn-outline btn" style="width:100%;">Crear Cuenta</a>
+      </div>
+      <div class="alt-links" style="justify-content:center;">
+        <button id="toggleThemeLanding" class="btn-outline" style="border:none; background:#f1f5f9; padding:6px 10px; border-radius:8px; font-size:.65rem; cursor:pointer;">Alternar tema</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    const root = document.documentElement;
+    function applyStoredTheme(){ const t = localStorage.getItem('theme'); if(t==='dark'){ root.classList.add('dark'); } else { root.classList.remove('dark'); } }
+    applyStoredTheme();
+    document.getElementById('toggleThemeLanding')?.addEventListener('click', ()=>{ const isDark = root.classList.toggle('dark'); localStorage.setItem('theme', isDark? 'dark':'light'); });
+  </script>
+</body>
+</html>
