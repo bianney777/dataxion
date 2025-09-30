@@ -1,75 +1,103 @@
-<% /* Nuevo layout utilitario catálogo */ %>
-<div class="catalog-util" id="catalogUtilRoot">
-  <div class="cu-header">
-    <div class="cu-tabs" role="tablist">
+<% /* Rebuild catálogo utilitario con fallback simple y hooks claros */ %>
+<div class="catalog-util" id="catalogUtilRoot" data-version="2">
+  <header class="cu-header">
+    <nav class="cu-tabs" role="tablist">
       <button class="cu-tab active" data-cu-tab="cultivos" role="tab" aria-selected="true">Cultivos (<%= categoriasCultivo.length %>)</button>
       <button class="cu-tab" data-cu-tab="insumos" role="tab" aria-selected="false">Insumos (<%= categoriasInsumo.length %>)</button>
-    </div>
+    </nav>
     <div class="cu-tools">
-      <div class="cu-search-wrap">
-        <input type="text" id="cuSearch" placeholder="Buscar..." aria-label="Buscar en catálogo" />
-      </div>
-      <select id="cuSort" aria-label="Ordenar" class="cu-sort">
+      <div class="cu-search-wrap"><input id="cuSearch" type="search" placeholder="Buscar..." aria-label="Buscar" /></div>
+      <select id="cuSort" class="cu-sort" aria-label="Ordenar">
         <option value="name_asc">Nombre A-Z</option>
         <option value="name_desc">Nombre Z-A</option>
         <option value="count_desc">Más elementos</option>
         <option value="count_asc">Menos elementos</option>
-        <option value="dias_desc">(Cultivos) Mayor promedio días</option>
-        <option value="dias_asc">(Cultivos) Menor promedio días</option>
+        <option value="dias_desc">(Cultivos) Más días</option>
+        <option value="dias_asc">(Cultivos) Menos días</option>
       </select>
+      <div class="cu-adv-filters" id="cuAdvFilters">
+        <details>
+          <summary class="cf-summary">Filtros</summary>
+          <div class="cf-body">
+            <label>Días (min)<input type="number" id="fDiasMin" class="cf-input" /></label>
+            <label>Días (max)<input type="number" id="fDiasMax" class="cf-input" /></label>
+            <label>Tipo Insumo<select id="fTipoInsumo" class="cf-input"><option value="">Todos</option><option value="fertilizante">Fertilizante</option><option value="plaguicida">Plaguicida</option><option value="semilla">Semilla</option><option value="herramienta">Herramienta</option><option value="equipo">Equipo</option><option value="otro">Otro</option></select></label>
+            <label><input type="checkbox" id="fSoloFavoritos" /> Favoritos</label>
+            <div class="cf-actions">
+              <button type="button" id="fReset" class="btn btn-xs">Reset</button>
+            </div>
+          </div>
+        </details>
+      </div>
+      <div class="cu-view-toggle" title="Cambiar vista">
+        <button id="cuViewToggle" class="btn btn-xs" data-mode="grid">Vista Lista</button>
+      </div>
+      <div class="cu-export">
+        <button id="cuExportCSV" class="btn btn-outline btn-xs" title="Exportar jerarquía CSV">Export CSV</button>
+      </div>
       <div class="cu-actions">
-        <button class="btn btn-success btn-xs" id="cuAddPrimary" data-add-ctx="cultivo">+ Categoría</button>
-        <button class="btn btn-outline btn-xs" id="cuAddSecondary" data-add-secondary hidden>+ Tipo</button>
+        <button class="btn btn-success btn-xs" data-open-modal="createCategoriaCultivo">+ Cat. Cultivo</button>
+        <button class="btn btn-success btn-xs" data-open-modal="createTipoCultivo">+ Tipo</button>
+        <button class="btn btn-success btn-xs" data-open-modal="createVariedadCultivo">+ Variedad</button>
+        <button class="btn btn-warning btn-xs" data-open-modal="createCategoriaInsumo">+ Cat. Insumo</button>
+        <button class="btn btn-warning btn-xs" data-open-modal="createInsumo">+ Insumo</button>
       </div>
     </div>
+  </header>
+  <div class="cu-metrics-bar" id="cuMetricsBar">
+    <div class="cu-metric-pill" data-mx="promDias">Prom. días: —</div>
+    <div class="cu-metric-pill" data-mx="variedadTop">Variedad top: —</div>
+    <div class="cu-metric-pill" data-mx="catActivas">Cat. con tipos: —</div>
+    <div class="cu-metric-pill" data-mx="insumoTop">Cat. insumo top: —</div>
   </div>
-
-  <div class="cu-panels">
+  <section class="cu-panels">
     <div class="cu-panel active" data-cu-panel="cultivos" role="tabpanel">
-      <ul class="cu-list" id="cuListCultivos">
-        <% categoriasCultivo.forEach(cat=> { const tipos = (tiposPorCategoria[cat.id_categoria]||[]); const avg = tipos.length ? Math.round(tipos.filter(t=>t.dias_cosecha).reduce((a,b)=> a + (b.dias_cosecha||0),0) / (tipos.filter(t=>t.dias_cosecha).length||1)) : null; %>
-          <li class="cu-item" data-kind="cultivo" data-id="<%= cat.id_categoria %>" data-name="<%= cat.nombre_categoria %>" data-count="<%= tipos.length %>" data-avg="<%= avg||'' %>">
-            <div class="cu-col main" data-open-qv>
+      <ul id="cuListCultivos" class="cu-list cu-grid">
+      <% categoriasCultivo.forEach(cat=> { const tipos = (tiposPorCategoria[cat.id_categoria]||[]); const avg = tipos.length ? Math.round(tipos.filter(t=>t.dias_cosecha).reduce((a,b)=> a + (b.dias_cosecha||0),0) / (tipos.filter(t=>t.dias_cosecha).length||1)) : null; %>
+        <li class="cu-item" role="button" tabindex="0" data-kind="cultivo" data-entity="categoria-cultivo" data-id="<%= cat.id_categoria %>" data-name="<%= cat.nombre_categoria %>" data-count="<%= tipos.length %>" data-avg="<%= avg||'' %>" data-created="<%= (cat.created_at||'') %>">
+          <div class="cu-row">
+            <div class="cu-main" data-open-qv>
               <span class="cu-icon" <%= cat.icono? 'data-icon-key="'+cat.icono+'"':'' %>><%= cat.icono || '🌿' %></span>
               <span class="cu-name"><%= cat.nombre_categoria %></span>
             </div>
-            <div class="cu-col stats">
-              <span class="cu-metric" title="Tipos de cultivo" data-metric="count"><%= tipos.length %></span>
-              <% if (avg) { %>
-                <span class="cu-metric alt" title="Promedio días cosecha" data-metric="avg"><%= avg %></span>
-              <% } %>
+            <div class="cu-stats">
+              <span class="cu-metric" data-metric="count" title="Tipos"><%= tipos.length %></span>
+              <% if (avg) { %><span class="cu-metric alt" data-metric="avg" title="Promedio días"><%= avg %></span><% } %>
             </div>
-            <div class="cu-col actions">
-              <button class="btn btn-outline btn-xs" data-edit="categoria-cultivo" data-id="<%= cat.id_categoria %>">Editar</button>
-              <button class="btn btn-outline btn-xs" data-add-tipo data-id="<%= cat.id_categoria %>">+ Tipo</button>
-              <button class="btn btn-danger btn-xs" data-delete="categoria-cultivo" data-id="<%= cat.id_categoria %>">X</button>
+            <div class="cu-actions-mini">
+              <button class="mini fav" data-fav-toggle title="Favorito">★</button>
+              <button class="mini" data-edit="categoria-cultivo" data-id="<%= cat.id_categoria %>">E</button>
+              <button class="mini" data-add-tipo data-id="<%= cat.id_categoria %>">+T</button>
+              <button class="mini danger" data-delete="categoria-cultivo" data-id="<%= cat.id_categoria %>">×</button>
             </div>
-          </li>
-        <% }) %>
+          </div>
+        </li>
+      <% }) %>
       </ul>
     </div>
     <div class="cu-panel" data-cu-panel="insumos" role="tabpanel">
-      <ul class="cu-list" id="cuListInsumos">
-        <% categoriasInsumo.forEach(cat=> { const insCat = insumos.filter(i=> i.id_categoria_insumo === cat.id_categoria_insumo); %>
-          <li class="cu-item" data-kind="insumo" data-id="<%= cat.id_categoria_insumo %>" data-name="<%= cat.nombre_categoria %>" data-count="<%= insCat.length %>" data-tipo="<%= cat.tipo||'' %>">
-            <div class="cu-col main" data-open-qv>
+      <ul id="cuListInsumos" class="cu-list cu-grid">
+      <% categoriasInsumo.forEach(cat=> { const insCat = insumos.filter(i=> i.id_categoria_insumo === cat.id_categoria_insumo); %>
+        <li class="cu-item" role="button" tabindex="0" data-kind="insumo" data-entity="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>" data-name="<%= cat.nombre_categoria %>" data-count="<%= insCat.length %>" data-tipo="<%= cat.tipo||'' %>" data-created="<%= (cat.created_at||'') %>">
+          <div class="cu-row">
+            <div class="cu-main" data-open-qv>
               <span class="cu-icon ins" data-icon-insumo="<%= cat.tipo||'' %>">📦</span>
               <span class="cu-name"><%= cat.nombre_categoria %></span>
             </div>
-            <div class="cu-col stats">
-              <span class="cu-metric" title="Insumos en la categoría" data-metric="count"><%= insCat.length %></span>
-              <% if (cat.tipo) { %>
-                <span class="cu-tag"><%= cat.tipo %></span>
-              <% } %>
+            <div class="cu-stats">
+              <span class="cu-metric" data-metric="count" title="Insumos"><%= insCat.length %></span>
+              <% if (cat.tipo) { %><span class="cu-tag"><%= cat.tipo %></span><% } %>
             </div>
-            <div class="cu-col actions">
-              <button class="btn btn-outline btn-xs" data-edit="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">Editar</button>
-              <button class="btn btn-outline btn-xs" data-add-insumo data-id="<%= cat.id_categoria_insumo %>">+ Insumo</button>
-              <button class="btn btn-danger btn-xs" data-delete="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">X</button>
+            <div class="cu-actions-mini">
+              <button class="mini fav" data-fav-toggle title="Favorito">★</button>
+              <button class="mini" data-edit="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">E</button>
+              <button class="mini" data-add-insumo data-id="<%= cat.id_categoria_insumo %>">+I</button>
+              <button class="mini danger" data-delete="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">×</button>
             </div>
-          </li>
-        <% }) %>
+          </div>
+        </li>
+      <% }) %>
       </ul>
     </div>
-  </div>
+  </section>
 </div>

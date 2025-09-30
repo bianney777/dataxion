@@ -10,6 +10,10 @@ function ensureAuthenticated(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
     req.user = decoded;
+    // Evitar cache del contenido autenticado
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     next();
   } catch (err) {
     return res.status(401).render('login', { error: 'Token inválido o expirado. Por favor inicia sesión nuevamente.' });

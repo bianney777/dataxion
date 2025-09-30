@@ -7,9 +7,13 @@
  *  - Accesibilidad (roles/ARIA) + focus management.
  */
 (function(){
-  if(window.__CATALOGO_LOADED__) return; window.__CATALOGO_LOADED__=true;
+  window.__CATALOGO_LOADED__ = (window.__CATALOGO_LOADED__||0) + 1;
   const DBG = (window.__CATALOG_DEBUG = { steps:[], errors:[], t0: Date.now() });
   const log = (s)=>{ DBG.steps.push(s); }; const err=(e)=>{ DBG.errors.push(String(e)); console.error('[catalogo]',e); };
+  console.log('[catalogo] script loaded');
+
+  // Util local (evitamos depender de app.js)
+  function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
 
   function showToastSafe(type,msg){ if(window.showToast) window.showToast(type,msg); }
 
@@ -23,9 +27,31 @@
     const panels = qsa('.cu-panel', root);
     const search = qs('#cuSearch');
     const sortSel = qs('#cuSort');
+    const advDiasMin = qs('#fDiasMin');
+    const advDiasMax = qs('#fDiasMax');
+    const advTipoInsumo = qs('#fTipoInsumo');
+    const advSoloFav = qs('#fSoloFavoritos');
+    const advReset = qs('#fReset');
+    const viewToggle = qs('#cuViewToggle');
+    const exportBtn = qs('#cuExportCSV');
+    const metricsBar = qs('#cuMetricsBar');
     const addPrimary = qs('#cuAddPrimary');
     const listCultivos = qs('#cuListCultivos');
     const listInsumos = qs('#cuListInsumos');
+
+    // Estado en memoria
+    const state = {
+      favorites: new Set(JSON.parse(localStorage.getItem('catalog.favorites')||'[]')),
+      view: localStorage.getItem('catalog.view')||'grid',
+    };
+    if(state.view==='list'){ root.setAttribute('data-view','list'); viewToggle && (viewToggle.dataset.mode='list', viewToggle.textContent='Vista Grid'); }
+
+    function persistFav(){ localStorage.setItem('catalog.favorites', JSON.stringify(Array.from(state.favorites))); }
+    function toggleFav(id){ if(state.favorites.has(id)) state.favorites.delete(id); else state.favorites.add(id); persistFav(); paintFavorites(); filterSort(); }
+    function paintFavorites(){ qsa('.cu-item').forEach(it=>{ const btn=it.querySelector('[data-fav-toggle]'); if(btn){ const key = it.dataset.entity+':'+it.dataset.id; btn.classList.toggle('active', state.favorites.has(key)); } }); }
+
+    // Badge NUEVO (últimos 7 días) si existe data-created ISO
+    (function markNew(){ const now=Date.now(); qsa('.cu-item').forEach(it=>{ const c=it.dataset.created; if(!c) return; const ts= Date.parse(c); if(!isNaN(ts) && (now - ts) < 7*24*3600*1000){ it.setAttribute('data-badge','new'); } }); })();
 
     /* ----------- Filtering / Sorting ----------- */
     function activate(tab){
@@ -47,7 +73,12 @@
       const items = qsa('.cu-item', activePanel);
       items.forEach(it=>{
         const name = (it.dataset.name||'').toLowerCase();
-        const visible = !q || name.includes(q);
+        let visible = !q || name.includes(q);
+        // Filtros avanzados
+        if(visible && advDiasMin && advDiasMin.value){ const min=parseInt(advDiasMin.value)||0; const avg=parseInt(it.dataset.avg||'0'); if(!avg || avg < min) visible=false; }
+        if(visible && advDiasMax && advDiasMax.value){ const max=parseInt(advDiasMax.value)||0; const avg=parseInt(it.dataset.avg||'0'); if(avg && avg > max) visible=false; }
+        if(visible && advTipoInsumo && advTipoInsumo.value && it.dataset.kind==='insumo'){ const ti=it.dataset.tipo||''; if(ti!==advTipoInsumo.value) visible=false; }
+        if(visible && advSoloFav && advSoloFav.checked){ const key = it.dataset.entity+':'+it.dataset.id; if(!state.favorites.has(key)) visible=false; }
         it.style.display = visible? '' : 'none';
       });
       const visible = items.filter(i=> i.style.display!=='none');
@@ -60,9 +91,24 @@
         dias_asc:(a,b)=> (parseInt(a.dataset.avg||'0')) - (parseInt(b.dataset.avg||'0'))
       };
       (sortFns[sort]||sortFns.name_asc) && visible.sort(sortFns[sort]||sortFns.name_asc).forEach(n=> n.parentElement.appendChild(n));
+      computeMetrics();
     }
     search && search.addEventListener('input', debounce(filterSort,180));
     sortSel && sortSel.addEventListener('change', filterSort);
+    advDiasMin && advDiasMin.addEventListener('input', debounce(filterSort,250));
+    advDiasMax && advDiasMax.addEventListener('input', debounce(filterSort,250));
+    advTipoInsumo && advTipoInsumo.addEventListener('change', filterSort);
+    advSoloFav && advSoloFav.addEventListener('change', filterSort);
+    advReset && advReset.addEventListener('click', ()=>{ advDiasMin.value=''; advDiasMax.value=''; advTipoInsumo.value=''; advSoloFav.checked=false; filterSort(); });
+
+    viewToggle && viewToggle.addEventListener('click', ()=>{
+      const next = root.getAttribute('data-view')==='list'? 'grid':'list';
+      if(next==='list'){ root.setAttribute('data-view','list'); viewToggle.textContent='Vista Grid'; viewToggle.dataset.mode='list'; }
+      else { root.removeAttribute('data-view'); viewToggle.textContent='Vista Lista'; viewToggle.dataset.mode='grid'; }
+      localStorage.setItem('catalog.view', next==='list'? 'list':'grid');
+    });
+
+    exportBtn && exportBtn.addEventListener('click', exportHierarchyCSV);
 
     /* ----------- Keyboard Navigation ----------- */
     root.addEventListener('keydown', e=>{
@@ -102,9 +148,12 @@
           <button type="button" class="qv-close" aria-label="Cerrar">×</button>
         </div>
         <div class="qv-body"><div class="qv-loading">Cargando detalle...</div></div>
-        <div class="qv-footer flex justify-end gap-2">
-          <button class="btn btn-outline btn-sm" data-qv-edit>Editar</button>
-          <button class="btn btn-danger btn-sm" data-qv-delete>Eliminar</button>
+        <div class="qv-footer flex flex-wrap justify-between gap-2">
+          <div class="flex gap-2">
+            <button class="btn btn-outline btn-sm" data-qv-edit>Editar</button>
+            <button class="btn btn-danger btn-sm" data-qv-delete>Eliminar</button>
+          </div>
+          <div class="flex gap-2" data-qv-extra></div>
         </div>
       </div>`;
       document.body.appendChild(overlay); document.body.style.overflow='hidden';
@@ -115,15 +164,80 @@
       // lazy fetch content
       (async()=>{
         let data=[]; if(kind==='cultivo') data = await fetchTipos(id); else data = await fetchInsumosCat(id);
-        overlay.querySelector('.qv-body').innerHTML = `<div class="qv-metrics">${count? `<span class='metric-box'>Total: ${count}</span>`:''}${avg? `<span class='metric-box'>Prom. días: ${avg}</span>`:''}</div>${buildListDetalle(data, kind==='cultivo'? 'tipo':'insumo')}`;
+        if(kind==='cultivo'){
+          // Para cada tipo, intentar traer variedades (silencioso si falla)
+          const tiposDet = [];
+          for(const t of data){
+            let variedades=[]; try { const r= await fetch('/api/catalogo/variedades-cultivo?id_tipo_cultivo='+t.id_tipo_cultivo); const j=await r.json(); if(j.ok) variedades=j.data; } catch(_e){}
+            tiposDet.push({ tipo: t, variedades });
+          }
+          overlay.querySelector('.qv-body').innerHTML = `<div class="qv-metrics mb-3 flex flex-wrap gap-2">${count? `<span class='metric-box'>Tipos: ${count}</span>`:''}${avg? `<span class='metric-box'>Prom. días: ${avg}</span>`:''}</div>`+
+            (tiposDet.length? `<div class='qv-section'>${tiposDet.map(td=>`<div class='qv-block' data-entity="tipo-cultivo" data-id="${td.tipo.id_tipo_cultivo}">
+              <div class='qb-head flex items-center justify-between gap-2'>
+                <strong>${td.tipo.nombre_tipo}</strong>
+                <div class='flex gap-1'>
+                  <button class='btn btn-xxs btn-outline' data-edit-tipo data-id="${td.tipo.id_tipo_cultivo}">Editar</button>
+                  <button class='btn btn-xxs btn-outline' data-add-variedad data-id="${td.tipo.id_tipo_cultivo}">+ Variedad</button>
+                </div>
+              </div>
+              <div class='qb-meta text-[11px] opacity-70 mb-1'>${td.tipo.dias_cosecha? td.tipo.dias_cosecha+' días · ':''}${td.tipo.temporada_optima||''}</div>
+              ${(td.variedades && td.variedades.length)? `<ul class='qv-sublist'>${td.variedades.map(v=>`<li data-entity="variedad-cultivo" data-id="${v.id_variedad}"><span>${v.nombre_variedad}</span><span class='actions'><button class='btn btn-xxs' data-edit-variedad data-id='${v.id_variedad}'>Editar</button></span></li>`).join('')}</ul>`: '<div class="text-[10px] italic opacity-60">Sin variedades</div>'}
+            </div>`).join('')}</div>` : '<div class="text-[11px] opacity-60">Sin tipos.</div>');
+        } else {
+          overlay.querySelector('.qv-body').innerHTML = `<div class="qv-metrics mb-3 flex flex-wrap gap-2">${count? `<span class='metric-box'>Insumos: ${count}</span>`:''}</div>${buildListDetalle(data,'insumo')}`;
+        }
+        injectQuickViewExtraActions(kind, id, overlay);
+        bindQuickViewInnerActions(overlay, kind, id);
       })();
+    }
+
+    function injectQuickViewExtraActions(kind, id, overlay){
+      const box = overlay.querySelector('[data-qv-extra]'); if(!box) return;
+      if(kind==='cultivo'){
+        box.innerHTML = `<button class='btn btn-sm btn-outline' data-add-tipo data-id='${id}'>+ Tipo</button>`;
+      } else {
+        box.innerHTML = `<button class='btn btn-sm btn-outline' data-add-insumo data-id='${id}'>+ Insumo</button>`;
+      }
+    }
+
+    function bindQuickViewInnerActions(overlay, kind, catId){
+      // Editar tipo
+      overlay.querySelectorAll('[data-edit-tipo]').forEach(b=> b.addEventListener('click', e=>{ e.stopPropagation(); openModal('createTipoCultivo',{ prefill:{ id_categoria: catId }, __endpoint:'/api/catalogo/tipos-cultivo/'+b.getAttribute('data-id'), __method:'PUT' }); }));
+      // Añadir variedad
+      overlay.querySelectorAll('[data-add-variedad]').forEach(b=> b.addEventListener('click', e=>{ e.stopPropagation(); openModal('createVariedadCultivo',{ prefill:{ id_tipo_cultivo: b.getAttribute('data-id') } }); }));
+      // Editar variedad
+      overlay.querySelectorAll('[data-edit-variedad]').forEach(b=> b.addEventListener('click', async (e)=>{ e.stopPropagation(); const vid=b.getAttribute('data-id'); try { const r= await fetch('/api/catalogo/variedades-cultivo/'+vid); const j=await r.json(); if(j.ok){ const d=j.data; d.__endpoint='/api/catalogo/variedades-cultivo/'+vid; d.__method='PUT'; openModal('createVariedadCultivo', d); } else showToastSafe('error','No encontrada'); } catch(_e){ showToastSafe('error','Error'); } }));
+      // Editar insumo directo desde lista (si se quisiera extender)
+      overlay.querySelectorAll('.qv-list li').forEach(li=>{
+        li.addEventListener('dblclick', ()=>{
+          if(kind==='insumo'){ const name=li.textContent.trim(); /* necesitaríamos id, extender HTML futuro */ }
+        });
+      });
     }
 
     root.addEventListener('click', e=>{
       const actionBtn = e.target.closest('[data-edit],[data-delete],[data-add-tipo],[data-add-insumo],#cuAddPrimary');
-      if(actionBtn){ handleCrudButton(actionBtn); return; }
+      if(actionBtn){ log('crud:btn'); handleCrudButton(actionBtn); return; }
       const row = e.target.closest('.cu-item');
-      if(row && !e.target.closest('.cu-col.actions')) openQuickView(row);
+      if(row && !e.target.closest('.cu-col.actions')) { log('qv:delegate:'+row.dataset.id); openQuickView(row); }
+      const favBtn = e.target.closest('[data-fav-toggle]');
+      if(favBtn){ e.stopPropagation(); const it=favBtn.closest('.cu-item'); if(it){ const key=it.dataset.entity+':'+it.dataset.id; toggleFav(key); } }
+    });
+    qsa('.cu-item', root).forEach(li=>{
+      if(li.__bound) return; li.__bound=true;
+      li.addEventListener('click', ev=>{ if(ev.target.closest('.cu-col.actions')) return; log('qv:direct:'+li.dataset.id); openQuickView(li); });
+      li.addEventListener('keydown', ev=>{ if(ev.key==='Enter' || ev.key===' '){ ev.preventDefault(); log('qv:keydown:'+li.dataset.id); openQuickView(li); }});
+    });
+
+    /* Hero / global create buttons fuera del root (.catalog-util) */
+    qsa('[data-open-modal]').forEach(btn=>{
+      if(btn.__cuBound) return; btn.__cuBound=true;
+      btn.addEventListener('click', ()=>{
+        const key = btn.getAttribute('data-open-modal');
+        log('open-modal:'+key);
+        if(!SCHEMAS[key]){ showToastSafe('error','Acción no soportada'); return; }
+        openModal(key);
+      });
     });
 
     /* ----------- CRUD ----------- */
@@ -135,6 +249,13 @@
       createTipoCultivo: { title:'Nuevo Tipo de Cultivo', endpoint:'/api/catalogo/tipos-cultivo', method:'POST', fields:[
         {name:'id_categoria', label:'Categoría', type:'select', required:true, optionsSource:'/api/catalogo/categorias-cultivo', optionLabel:'nombre_categoria', optionValue:'id_categoria'},
         {name:'nombre_tipo', label:'Nombre', required:true }, {name:'nombre_cientifico', label:'Nombre Científico'}, {name:'descripcion', label:'Descripción', type:'textarea'}, {name:'temporada_optima', label:'Temporada'}, {name:'dias_cosecha', label:'Días Cosecha', type:'number'} ]},
+      createVariedadCultivo: { title:'Nueva Variedad', endpoint:'/api/catalogo/variedades-cultivo', method:'POST', fields:[
+        {name:'id_tipo_cultivo', label:'Tipo de Cultivo', type:'select', required:true, optionsSource:'/api/catalogo/tipos-cultivo', optionLabel:'nombre_tipo', optionValue:'id_tipo_cultivo'},
+        {name:'nombre_variedad', label:'Nombre', required:true },
+        {name:'caracteristicas', label:'Características', type:'textarea'},
+        {name:'resistencia_enfermedades', label:'Resist. Enfermedades', type:'textarea'},
+        {name:'rendimiento_esperado', label:'Rendimiento Esperado', type:'number'}
+      ]},
       createCategoriaInsumo: { title:'Nueva Categoría de Insumo', endpoint:'/api/catalogo/categorias-insumo', method:'POST', fields:[
         {name:'nombre_categoria', label:'Nombre', required:true }, {name:'descripcion', label:'Descripción', type:'textarea'}, {name:'tipo', label:'Tipo', type:'select-static', options:[
           {value:'fertilizante', label:'Fertilizante'},{value:'plaguicida', label:'Plaguicida'},{value:'semilla', label:'Semilla'},{value:'herramienta', label:'Herramienta'},{value:'equipo', label:'Equipo'},{value:'otro', label:'Otro'} ]} ]},
@@ -176,7 +297,7 @@
       if(schema.fields.some(f=> f.type==='select' && f.optionsSource)) loadDynamicSelects(schema, form, data);
       initIconPicker(form);
     }
-    function closeModal(){ modalHost.innerHTML=''; modalHost.style.display='none'; document.body.style.overflow=''; }
+  function closeModal(){ modalHost.innerHTML=''; modalHost.style.display='none'; document.body.style.overflow=''; }
 
     async function loadDynamicSelects(schema, form, data){
       await Promise.all(schema.fields.filter(f=> f.type==='select' && f.optionsSource).map(async f=>{
@@ -192,7 +313,18 @@
     async function triggerEdit(row){ const entity = row.getAttribute('data-kind')==='cultivo'? 'categoria-cultivo':'categoria-insumo'; await editEntity(entity, row.dataset.id); }
     async function triggerDelete(row){ const entity = row.getAttribute('data-kind')==='cultivo'? 'categoria-cultivo':'categoria-insumo'; await deleteEntity(entity, row.dataset.id); }
 
-    async function editEntity(entity, id){ const map={ 'categoria-cultivo':{ url:'/api/catalogo/categorias-cultivo/'+id, schema:'createCategoriaCultivo' }, 'categoria-insumo':{ url:'/api/catalogo/categorias-insumo/'+id, schema:'createCategoriaInsumo' } }; const cfg=map[entity]; if(!cfg) return; try { const r= await fetch(cfg.url); const j= await r.json(); if(j.ok){ const data=j.data; data.__endpoint=cfg.url; data.__method='PUT'; openModal(cfg.schema, data); } else showToastSafe('error','No encontrado'); } catch(e){ showToastSafe('error','Error'); } }
+    async function editEntity(entity, id){
+      const map={
+        'categoria-cultivo':{ url:'/api/catalogo/categorias-cultivo/'+id, schema:'createCategoriaCultivo' },
+        'categoria-insumo':{ url:'/api/catalogo/categorias-insumo/'+id, schema:'createCategoriaInsumo' },
+        'tipo-cultivo':{ url:'/api/catalogo/tipos-cultivo/'+id, schema:'createTipoCultivo' },
+        'variedad-cultivo':{ url:'/api/catalogo/variedades-cultivo/'+id, schema:'createVariedadCultivo' },
+        'insumo':{ url:'/api/catalogo/insumos/'+id, schema:'createInsumo' }
+      };
+      const cfg=map[entity]; if(!cfg) return;
+      try { const r= await fetch(cfg.url); const j= await r.json(); if(j.ok){ const data=j.data; data.__endpoint=cfg.url; data.__method='PUT'; openModal(cfg.schema, data); } else showToastSafe('error','No encontrado'); }
+      catch(e){ showToastSafe('error','Error'); }
+    }
     async function deleteEntity(entity, id){ if(!confirm('¿Eliminar registro?')) return; const map={ 'categoria-cultivo':'/api/catalogo/categorias-cultivo/'+id, 'categoria-insumo':'/api/catalogo/categorias-insumo/'+id }; try { const r= await fetch(map[entity], { method:'DELETE' }); const j= await r.json(); if(j.ok){ showToastSafe('success','Eliminado'); refreshPartial(); } else showToastSafe('error', j.message||'Error'); } catch(e){ showToastSafe('error','Fallo'); } }
 
     function handleCrudButton(btn){
@@ -204,8 +336,15 @@
     }
 
     async function refreshPartial(){
-      try { const r= await fetch('/catalogo'); if(!r.ok) return; const html= await r.text(); const doc=new DOMParser().parseFromString(html,'text/html'); const fresh= doc.getElementById('catalogUtilRoot'); if(fresh){ qs('#catalogUtilRoot')?.replaceWith(fresh); showToastSafe('success','Catálogo actualizado'); setTimeout(()=> init(),50); } } catch(e){ err(e); }
+      try {
+        const r= await fetch('/catalogo'); if(!r.ok) return; const html= await r.text();
+        const doc=new DOMParser().parseFromString(html,'text/html');
+        const fresh= doc.getElementById('catalogUtilRoot');
+        const current = qs('#catalogUtilRoot');
+        if(fresh && current){ current.replaceWith(fresh); showToastSafe('success','Catálogo actualizado'); setTimeout(()=> init(),40); }
+      } catch(e){ err(e); }
     }
+    window.refreshCatalogPartial = refreshPartial; // exposición para debug/manual
 
     /* ----------- Icon Hydration ----------- */
     function hydrateIcons(){
@@ -213,13 +352,70 @@
       qsa('.cu-icon[data-icon-key]', root).forEach(el=>{ const k=el.getAttribute('data-icon-key'); if(k){ const svg=window.getIconSvg(k); if(svg) el.innerHTML=svg; } });
     }
 
+    function computeMetrics(){
+      if(!metricsBar) return;
+      // Promedio global días (visibles cultivos)
+      const cultivosVisible = qsa('.cu-panel[data-cu-panel="cultivos"] .cu-item').filter(it=> it.style.display!== 'none');
+      const diasVals = cultivosVisible.map(c=> parseInt(c.dataset.avg||'')).filter(v=> !isNaN(v) && v>0);
+      const promDias = diasVals.length? Math.round(diasVals.reduce((a,b)=>a+b,0)/diasVals.length): '—';
+      metricsBar.querySelector('[data-mx="promDias"]').textContent = 'Prom. días: '+promDias;
+      // Variedad top (placeholder - requiere endpoint variedades agregadas). Usaremos mayor avg como proxy.
+      const top = diasVals.length? Math.max(...diasVals): null; metricsBar.querySelector('[data-mx="variedadTop"]').textContent = 'Variedad top: '+(top||'—');
+      // Categorías con tipos (proxy: count>0)
+      const catActivas = cultivosVisible.filter(c=> parseInt(c.dataset.count||'0')>0).length + '/' + cultivosVisible.length;
+      metricsBar.querySelector('[data-mx="catActivas"]').textContent = 'Cat. con tipos: '+catActivas;
+      // Categoría insumo top (# insumos visible)
+      const insCatsVisible = qsa('.cu-panel[data-cu-panel="insumos"] .cu-item').filter(it=> it.style.display!=='none');
+      let topInsumoCat='—'; let maxIn= -1; insCatsVisible.forEach(c=>{ const n=parseInt(c.dataset.count||'0'); if(n>maxIn){ maxIn=n; topInsumoCat=c.dataset.name; } });
+      metricsBar.querySelector('[data-mx="insumoTop"]').textContent = 'Cat. insumo top: '+topInsumoCat;
+    }
+
+    function exportHierarchyCSV(){
+      try {
+        const lines = ['tipo_raiz,tipo,id,nombre,meta,count,avg_dias'];
+        // Cultivos
+        qsa('#cuListCultivos .cu-item').forEach(c=>{
+          const base = ['cultivo','categoria-cultivo', c.dataset.id, '"'+(c.dataset.name||'')+'"','', c.dataset.count||'0', c.dataset.avg||''];
+          lines.push(base.join(','));
+        });
+        // Insumos
+        qsa('#cuListInsumos .cu-item').forEach(c=>{
+          const base = ['insumo','categoria-insumo', c.dataset.id, '"'+(c.dataset.name||'')+'"', (c.dataset.tipo||''), c.dataset.count||'0',''];
+          lines.push(base.join(','));
+        });
+        const blob = new Blob([lines.join('\n')], { type:'text/csv;charset=utf-8;' });
+        const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='catalogo_hierarquia.csv'; a.click(); URL.revokeObjectURL(a.href);
+        showToastSafe('success','CSV generado');
+      } catch(e){ err(e); showToastSafe('error','Export falló'); }
+    }
+
+    paintFavorites();
+
     const last = localStorage.getItem('catalog.tab');
     const initial = tabButtons.some(b=> b.getAttribute('data-cu-tab')===last) ? last : (tabButtons[0] && tabButtons[0].getAttribute('data-cu-tab'));
     if(initial) activate(initial);
     hydrateIcons();
     filterSort();
+  computeMetrics();
     log('init:complete');
+    window.__CATALOGO_HEALTH__ = { t: Date.now(), items: qsa('.cu-item').length };
+    window.__catalogDiag = function(){
+      const data = {
+        loadedCounter: window.__CATALOGO_LOADED__,
+        health: window.__CATALOGO_HEALTH__,
+        items: qsa('.cu-item').length,
+        modalHost: !!document.getElementById('modalHost'),
+        haveListeners: !!qsa('.cu-item')[0]?.__bound,
+        steps: DBG.steps.slice(-15),
+        errors: DBG.errors,
+        schemas: Object.keys(SCHEMAS)
+      };
+      console.table(data);
+      return data;
+    };
+    if(!qsa('.cu-item').length){ console.warn('[catalogo] cero items en init'); }
   }
 
   document.addEventListener('DOMContentLoaded', ()=>{ try { init(); } catch(e){ err(e); } });
+  setTimeout(()=>{ try { if(!window.__CATALOGO_HEALTH__ || window.__CATALOGO_HEALTH__.items===0){ console.warn('[catalogo] fallback reinit'); init(); } } catch(_e){} },2000);
 })();

@@ -32,28 +32,16 @@
   }
   window.showToast = showToast;
 
-  /* Global error instrumentation (hotfix: detectar silenciosamente errores que bloquean UI) */
+  /* Global error instrumentation (limpio: sólo monitoreo, sin lógica obsoleta) */
   if(!window.__GLOBAL_ERROR_MONITOR__){
-    // Catálogo: lógica movida a catalogo.js (módulo dedicado)
-    async function load(){
-      container.innerHTML = skeletonCards(6);
-      const params = { q: searchInput?.value || '', tipo_suelo: sueloFilter?.value || '', page:lotePagination.page, limit:lotePagination.limit };
-      const key = fincaId+':'+cacheKey(params);
-      if(cacheStore.lotes.has(key)){
-        container.innerHTML = cacheStore.lotes.get(key).map(renderLoteCard).join('');
-      }
-      const lotes = await fetchLotes(fincaId, params);
-      cacheStore.lotes.set(key, lotes);
-      if(!lotes.length){ container.innerHTML = '<div class="text-center text-xs text-slate-500 col-span-full">Sin lotes</div>'; renderPagination(lotePagination,'[data-lotes-pagination]',load); return; }
-      container.innerHTML = lotes.map(renderLoteCard).join('');
-      renderPagination(lotePagination,'[data-lotes-pagination]',load);
-    }
-    const debounced = debounce(load,400);
-    searchInput && searchInput.addEventListener('input', debounced);
-    sueloFilter && sueloFilter.addEventListener('change', ()=>{ lotePagination.page=1; load(); });
-    load();
+    window.__GLOBAL_ERROR_MONITOR__ = true;
+    window.addEventListener('error', (e)=>{
+      try { console.error('[GlobalError]', e.message, e.filename+':'+e.lineno); } catch(_){}
+    });
+    window.addEventListener('unhandledrejection', (e)=>{
+      try { console.error('[UnhandledRejection]', e.reason); } catch(_){}
+    });
   }
-  window.mountLotesDynamic = mountLotesDynamic;
 
   /* Skeleton */
   function skeletonCards(n){
@@ -79,14 +67,41 @@
   function startExportProgress(){ const bar=document.getElementById('exportProgress'); if(!bar) return; bar.classList.remove('hidden'); bar.querySelector('.bar').style.width='0%'; }
   function updateExportProgress(p){ const bar=document.getElementById('exportProgress'); if(!bar) return; bar.querySelector('.bar').style.width=p+'%'; }
   function finishExportProgress(success=true){ const bar=document.getElementById('exportProgress'); if(!bar) return; updateExportProgress(100); setTimeout(()=>bar.classList.add('hidden'), 600); if(success) showToast('success','Export listo'); }
-  async function exportFincas(){ startExportProgress(); const all = await fetchFincas({ limit:1000 }); if(!all.length){ finishExportProgress(false); showToast('error','Nada para exportar'); return; } updateExportProgress(30); const csv=toCSV(all); updateExportProgress(70); downloadBlob(csv,'fincas.csv','text/csv;charset=utf-8;'); finishExportProgress(true); }
-  async function exportLotes(){ startExportProgress(); const cont=document.querySelector('[data-lotes-container]'); if(!cont){ finishExportProgress(false); showToast('error','Sin contexto de lotes'); return; } const fincaId=cont.getAttribute('data-id-finca'); const lotes = await fetchLotes(fincaId,{ limit:1000 }); if(!lotes.length){ finishExportProgress(false); showToast('error','Nada para exportar'); return; } updateExportProgress(30); const csv=toCSV(lotes); updateExportProgress(70); downloadBlob(csv,'lotes_finca_'+fincaId+'.csv','text/csv;charset=utf-8;'); finishExportProgress(true); }
+  async function exportFincas(){
+    startExportProgress();
+    try {
+      let all = [];
+      if(window.fetchAllFincas){ all = await window.fetchAllFincas(); }
+      if((!all || !all.length) && window.__fincasSnapshot){ all = window.__fincasSnapshot; }
+      if(!all.length){ finishExportProgress(false); showToast('error','Nada para exportar'); return; }
+      updateExportProgress(30);
+      const csv=toCSV(all);
+      updateExportProgress(70);
+      downloadBlob(csv,'fincas.csv','text/csv;charset=utf-8;');
+      finishExportProgress(true);
+    } catch(e){ finishExportProgress(false); showToast('error','Error exportando'); }
+  }
+  async function exportLotes(){
+    startExportProgress();
+    try {
+      const cont=document.querySelector('[data-lotes-container]'); if(!cont){ finishExportProgress(false); showToast('error','Sin contexto de lotes'); return; }
+      const fincaId=cont.getAttribute('data-id-finca'); if(!fincaId){ finishExportProgress(false); showToast('error','Finca no definida'); return; }
+      if(!window.fetchAllLotes){ finishExportProgress(false); showToast('error','Función no disponible'); return; }
+      const lotes = await window.fetchAllLotes(fincaId);
+      if(!lotes.length){ finishExportProgress(false); showToast('error','Nada para exportar'); return; }
+      updateExportProgress(30);
+      const csv=toCSV(lotes);
+      updateExportProgress(70);
+      downloadBlob(csv,'lotes_finca_'+fincaId+'.csv','text/csv;charset=utf-8;');
+      finishExportProgress(true);
+    } catch(e){ finishExportProgress(false); showToast('error','Error exportando'); }
+  }
   /* Excel / PDF (SheetJS & jsPDF) */
   function rowsToSheet(wsData){ const ws = XLSX.utils.json_to_sheet(wsData); return ws; }
-  async function exportFincasExcel(){ startExportProgress(); const data= await fetchFincas({ limit:2000 }); if(!data.length){ finishExportProgress(false); showToast('error','Sin datos'); return; } updateExportProgress(40); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, rowsToSheet(data),'Fincas'); updateExportProgress(70); XLSX.writeFile(wb,'fincas.xlsx'); finishExportProgress(true); }
-  async function exportLotesExcel(){ startExportProgress(); const cont=document.querySelector('[data-lotes-container]'); if(!cont){ finishExportProgress(false); showToast('error','Sin contexto'); return; } const fincaId=cont.getAttribute('data-id-finca'); const data= await fetchLotes(fincaId,{ limit:2000 }); if(!data.length){ finishExportProgress(false); showToast('error','Sin datos'); return; } updateExportProgress(40); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, rowsToSheet(data),'Lotes'); updateExportProgress(70); XLSX.writeFile(wb,'lotes_finca_'+fincaId+'.xlsx'); finishExportProgress(true); }
-  async function exportFincasPDF(){ startExportProgress(); const data= await fetchFincas({ limit:1000 }); if(!data.length){ finishExportProgress(false); showToast('error','Sin datos'); return; } updateExportProgress(30); const { jsPDF } = window.jspdf; const doc = new jsPDF('l','pt','a4'); const cols = Object.keys(data[0]); const rows = data.map(r=>cols.map(c=> String(r[c] ?? ''))); updateExportProgress(60); doc.text('Fincas',40,40); doc.autoTable({ startY:60, head:[cols], body:rows, styles:{ fontSize:7 } }); updateExportProgress(90); doc.save('fincas.pdf'); finishExportProgress(true); }
-  async function exportLotesPDF(){ startExportProgress(); const cont=document.querySelector('[data-lotes-container]'); if(!cont){ finishExportProgress(false); showToast('error','Sin contexto'); return; } const fincaId=cont.getAttribute('data-id-finca'); const data= await fetchLotes(fincaId,{ limit:2000 }); if(!data.length){ finishExportProgress(false); showToast('error','Sin datos'); return; } updateExportProgress(30); const { jsPDF } = window.jspdf; const doc = new jsPDF('l','pt','a4'); const cols = Object.keys(data[0]); const rows = data.map(r=>cols.map(c=> String(r[c] ?? ''))); updateExportProgress(60); doc.text('Lotes finca '+fincaId,40,40); doc.autoTable({ startY:60, head:[cols], body:rows, styles:{ fontSize:7 } }); updateExportProgress(90); doc.save('lotes_finca_'+fincaId+'.pdf'); finishExportProgress(true); }
+  async function exportFincasExcel(){ startExportProgress(); try { let data = []; if(window.fetchAllFincas){ data = await fetchAllFincas(); } if((!data || !data.length) && window.__fincasSnapshot){ data = window.__fincasSnapshot; } if(!data.length){ finishExportProgress(false); showToast('error','Sin datos'); return; } updateExportProgress(40); if(!window.XLSX){ finishExportProgress(false); showToast('error','XLSX no cargado'); return; } const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, rowsToSheet(data),'Fincas'); updateExportProgress(70); XLSX.writeFile(wb,'fincas.xlsx'); finishExportProgress(true); } catch(e){ finishExportProgress(false); showToast('error','Error exportando'); } }
+  async function exportLotesExcel(){ startExportProgress(); try { const cont=document.querySelector('[data-lotes-container]'); if(!cont){ finishExportProgress(false); showToast('error','Sin contexto'); return; } const fincaId=cont.getAttribute('data-id-finca'); if(!fincaId){ finishExportProgress(false); showToast('error','Finca no definida'); return; } if(!window.fetchAllLotes){ finishExportProgress(false); showToast('error','Función no disponible'); return; } const data= await fetchAllLotes(fincaId); if(!data.length){ finishExportProgress(false); showToast('error','Sin datos'); return; } updateExportProgress(40); if(!window.XLSX){ finishExportProgress(false); showToast('error','XLSX no cargado'); return; } const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, rowsToSheet(data),'Lotes'); updateExportProgress(70); XLSX.writeFile(wb,'lotes_finca_'+fincaId+'.xlsx'); finishExportProgress(true); } catch(e){ finishExportProgress(false); showToast('error','Error exportando'); } }
+  async function exportFincasPDF(){ startExportProgress(); try { let data = []; if(window.fetchAllFincas){ data = await fetchAllFincas(); } if((!data || !data.length) && window.__fincasSnapshot){ data = window.__fincasSnapshot; } if(!data.length){ finishExportProgress(false); showToast('error','Sin datos'); return; } updateExportProgress(30); if(!window.jspdf || !window.jspdf.jsPDF){ finishExportProgress(false); showToast('error','jsPDF no cargado'); return; } const { jsPDF } = window.jspdf; const doc = new jsPDF('l','pt','a4'); const cols = Object.keys(data[0]); const rows = data.map(r=>cols.map(c=> String(r[c] ?? ''))); updateExportProgress(60); if(!doc.autoTable){ finishExportProgress(false); showToast('error','AutoTable no cargado'); return; } doc.text('Fincas',40,40); doc.autoTable({ startY:60, head:[cols], body:rows, styles:{ fontSize:7 } }); updateExportProgress(90); doc.save('fincas.pdf'); finishExportProgress(true); } catch(e){ finishExportProgress(false); showToast('error','Error exportando'); } }
+  async function exportLotesPDF(){ startExportProgress(); try { const cont=document.querySelector('[data-lotes-container]'); if(!cont){ finishExportProgress(false); showToast('error','Sin contexto'); return; } const fincaId=cont.getAttribute('data-id-finca'); if(!fincaId){ finishExportProgress(false); showToast('error','Finca no definida'); return; } if(!window.fetchAllLotes){ finishExportProgress(false); showToast('error','Función no disponible'); return; } const data= await fetchAllLotes(fincaId); if(!data.length){ finishExportProgress(false); showToast('error','Sin datos'); return; } updateExportProgress(30); if(!window.jspdf || !window.jspdf.jsPDF){ finishExportProgress(false); showToast('error','jsPDF no cargado'); return; } const { jsPDF } = window.jspdf; const doc = new jsPDF('l','pt','a4'); const cols = Object.keys(data[0]); const rows = data.map(r=>cols.map(c=> String(r[c] ?? ''))); updateExportProgress(60); if(!doc.autoTable){ finishExportProgress(false); showToast('error','AutoTable no cargado'); return; } doc.text('Lotes finca '+fincaId,40,40); doc.autoTable({ startY:60, head:[cols], body:rows, styles:{ fontSize:7 } }); updateExportProgress(90); doc.save('lotes_finca_'+fincaId+'.pdf'); finishExportProgress(true); } catch(e){ finishExportProgress(false); showToast('error','Error exportando'); } }
   window.exportFincas=exportFincas; window.exportLotes=exportLotes; window.exportFincasExcel=exportFincasExcel; window.exportLotesExcel=exportLotesExcel; window.exportFincasPDF=exportFincasPDF; window.exportLotesPDF=exportLotesPDF;
 
   /* Métricas */
@@ -110,8 +125,8 @@
 
   /* Auto init */
   document.addEventListener('DOMContentLoaded', ()=>{
-    mountFincasDynamic();
-    mountLotesDynamic();
+  // Inicialización de fincas/lotes ocurre dentro de gestionfinca.js
+  // (evitamos referencias a funciones inexistentes si no estamos en esa vista)
     loadFincasMetrics();
     loadLotesMetrics();
     setupValidation();
@@ -150,285 +165,7 @@
     document.getElementById('exportLotesExcelBtn')?.addEventListener('click', exportLotesExcel);
     document.getElementById('exportLotesPdfBtn')?.addEventListener('click', exportLotesPDF);
 
-    // Catálogo agrícola (si existe la página)
-    (function catalogInit(){
-      const search = document.getElementById('catalogSearch');
-      const filter = document.getElementById('catalogFilter');
-      if(!search && !filter) return; // no estamos en catálogo
-      const cards = Array.from(document.querySelectorAll('[data-kind][data-name]'));
-      function apply(){
-        const q = (search?.value||'').toLowerCase();
-        const kind = filter?.value || '';
-        cards.forEach(c=>{
-          const name = (c.getAttribute('data-name')||'').toLowerCase();
-            const k = c.getAttribute('data-kind');
-            const matchQ = !q || name.includes(q);
-            const matchK = !kind || k===kind;
-            c.style.display = (matchQ && matchK) ? '' : 'none';
-        });
-      }
-      function hydrateCategoryIcons(){
-        if(!window.CATALOG_ICONS || !window.getIconSvg) return;
-        document.querySelectorAll('.tile-icon[data-icon-key]').forEach(el=>{
-          const key = el.getAttribute('data-icon-key'); if(!key) return; const svg=window.getIconSvg(key); if(svg){ el.innerHTML=svg; }
-        });
-      }
-      function setupTileInteractions(){
-        const tiles = document.querySelectorAll('.catalog-tile');
-        tiles.forEach(tile=>{
-          tile.addEventListener('click', (e)=>{
-            if(e.target.closest('.tile-actions') || e.target.closest('button[data-edit]') || e.target.closest('button[data-delete]')) return;
-            openQuickView(tile);
-          });
-        });
-      }
-      function openQuickView(tile){
-        const existing = document.getElementById('quickViewOverlay');
-        if(existing) existing.remove();
-        const id = tile.getAttribute('data-id');
-        const kind = tile.getAttribute('data-kind');
-  const title = tile.querySelector('.tile-title')?.textContent || tile.getAttribute('data-name') || '';
-        const iconKey = tile.querySelector('.tile-icon')?.getAttribute('data-icon-key') || '';
-        const iconRaw = iconKey && window.getIconSvg ? window.getIconSvg(iconKey) : (tile.querySelector('.tile-icon')?.innerHTML || '🌿');
-        const detailSource = tile.querySelector('.tile-detail-inner');
-        let inner = '';
-        if(detailSource){ inner = detailSource.innerHTML; }
-        else { inner = '<p class="detail-desc">Sin detalle disponible.</p>'; }
-        // métricas simples (ej: promedio días)
-        let avgDias = null; const diasVals=[];
-        tile.querySelectorAll('.detail-item[data-dias]').forEach(li=>{ const v=parseInt(li.getAttribute('data-dias')); if(!isNaN(v)) diasVals.push(v); });
-        if(diasVals.length){ avgDias = Math.round(diasVals.reduce((a,b)=>a+b,0)/diasVals.length); }
-        const overlay = document.createElement('div');
-        overlay.id='quickViewOverlay';
-        overlay.className='quick-view-overlay';
-        overlay.innerHTML = `<div class="quick-view-panel animate-in">
-          <div class="qv-header">
-            <div class="qv-icon">${iconRaw}</div>
-            <div class="qv-titles">
-              <h3>${title}</h3>
-              <div class="qv-sub">${kind==='cultivo' ? 'Categoría de Cultivo' : 'Categoría de Insumo'} • ID ${id}</div>
-            </div>
-            <button type="button" class="qv-close" aria-label="Cerrar">&times;</button>
-          </div>
-          <div class="qv-body">${inner}</div>
-          <div class="qv-metrics">${avgDias? `<div class='metric-box'><span class='label'>Promedio días cosecha</span><span class='val'>${avgDias}</span></div>`:''}</div>
-          <div class="qv-footer flex justify-end gap-2">
-            <button class="btn btn-outline btn-sm" data-qv-edit>Editar</button>
-            <button class="btn btn-danger btn-sm" data-qv-delete>Eliminar</button>
-          </div>
-        </div>`;
-        document.body.appendChild(overlay);
-        document.body.style.overflow='hidden';
-        const close = ()=>{ overlay.remove(); document.body.style.overflow=''; };
-        overlay.addEventListener('click', e=>{ if(e.target===overlay || e.target.classList.contains('qv-close')) close(); });
-        // acciones editar/eliminar reutilizando handlers existentes
-        overlay.querySelector('[data-qv-edit]')?.addEventListener('click', ()=>{
-          const entity = tile.getAttribute('data-entity');
-          const editBtn = tile.querySelector(`[data-edit='${entity}']`);
-          if(editBtn){ editBtn.click(); close(); }
-        });
-        overlay.querySelector('[data-qv-delete]')?.addEventListener('click', ()=>{
-          const entity = tile.getAttribute('data-entity');
-            const delBtn = tile.querySelector(`[data-delete='${entity}']`);
-            if(delBtn){ delBtn.click(); close(); }
-        });
-      }
-      // initial calls
-      setupTileInteractions();
-      // patch reload to re-bind (monkey patch existing function if present later)
-      const origReload = window.reloadCatalogPartial;
-      if(typeof origReload === 'function'){
-        window.reloadCatalogPartial = async function(){ await origReload(); setupTileInteractions(); };
-      }
-      function hydrateCategoryIcons(){
-        if(!window.CATALOG_ICONS || !window.getIconSvg) return;
-        document.querySelectorAll('.cat-icon-bubble[data-icon-key]').forEach(el=>{
-          const key = el.getAttribute('data-icon-key');
-          if(!key) return;
-          const svg = window.getIconSvg(key);
-          if(svg){ el.innerHTML = `<div class="hydrated-icon">${svg}</div>`; }
-        });
-      }
-      search && search.addEventListener('input', debounce(apply,300));
-      filter && filter.addEventListener('change', apply);
-      apply();
-      hydrateCategoryIcons();
-
-      /* --- CRUD dinámico catálogo --- */
-      const modalHost = document.getElementById('modalHost');
-      function closeModal(){ modalHost.innerHTML=''; modalHost.style.display='none'; document.body.style.overflow=''; }
-      function openModal(key, data){
-        const schemas = {
-          createCategoriaCultivo: { title:'Nueva Categoría de Cultivo', endpoint:'/api/catalogo/categorias-cultivo', method:'POST', fields:[
-            {name:'nombre_categoria', label:'Nombre', required:true },
-            {name:'descripcion', label:'Descripción', type:'textarea'},
-            {name:'icono', label:'Icono (opcional)'}
-          ]},
-          createTipoCultivo: { title:'Nuevo Tipo de Cultivo', endpoint:'/api/catalogo/tipos-cultivo', method:'POST', fields:[
-            {name:'id_categoria', label:'Categoría', type:'select', required:true, optionsSource:'/api/catalogo/categorias-cultivo', optionLabel:'nombre_categoria', optionValue:'id_categoria'},
-            {name:'nombre_tipo', label:'Nombre', required:true },
-            {name:'nombre_cientifico', label:'Nombre Científico'},
-            {name:'descripcion', label:'Descripción', type:'textarea'},
-            {name:'temporada_optima', label:'Temporada'},
-            {name:'dias_cosecha', label:'Días Cosecha', type:'number'}
-          ]},
-          createVariedadCultivo: { title:'Nueva Variedad', endpoint:'/api/catalogo/variedades-cultivo', method:'POST', fields:[
-            {name:'id_tipo_cultivo', label:'Tipo Cultivo', type:'select', required:true, optionsSource:'/api/catalogo/tipos-cultivo', optionLabel:'nombre_tipo', optionValue:'id_tipo_cultivo'},
-            {name:'nombre_variedad', label:'Nombre', required:true },
-            {name:'caracteristicas', label:'Características', type:'textarea'},
-            {name:'resistencia_enfermedades', label:'Resist. Enfermedades', type:'textarea'},
-            {name:'rendimiento_esperado', label:'Rendimiento Esperado', type:'number'}
-          ]},
-          createCategoriaInsumo: { title:'Nueva Categoría de Insumo', endpoint:'/api/catalogo/categorias-insumo', method:'POST', fields:[
-            {name:'nombre_categoria', label:'Nombre', required:true },
-            {name:'descripcion', label:'Descripción', type:'textarea'},
-            {name:'tipo', label:'Tipo', type:'select-static', options:[
-              {value:'fertilizante', label:'Fertilizante'},
-              {value:'plaguicida', label:'Plaguicida'},
-              {value:'semilla', label:'Semilla'},
-              {value:'herramienta', label:'Herramienta'},
-              {value:'equipo', label:'Equipo'},
-              {value:'otro', label:'Otro'}
-            ]}
-          ]},
-          createInsumo: { title:'Nuevo Insumo', endpoint:'/api/catalogo/insumos', method:'POST', fields:[
-            {name:'id_categoria_insumo', label:'Categoría Insumo', type:'select', required:true, optionsSource:'/api/catalogo/categorias-insumo', optionLabel:'nombre_categoria', optionValue:'id_categoria_insumo'},
-            {name:'nombre_insumo', label:'Nombre', required:true },
-            {name:'descripcion', label:'Descripción', type:'textarea'},
-            {name:'fabricante', label:'Fabricante'},
-            {name:'composicion', label:'Composición', type:'textarea'},
-            {name:'instrucciones_uso', label:'Instrucciones de Uso', type:'textarea'},
-            {name:'precauciones', label:'Precauciones', type:'textarea'}
-          ]}
-        };
-        const schema = schemas[key] || (data && data.__schema ? schemas[data.__schema]: null); if(!schema) return;
-        const formId='form_'+Date.now();
-        modalHost.style.display='block';
-        modalHost.innerHTML = `<div class="modal-overlay"><div class="modal-box animate-in"><button class="modal-close" data-close>&times;</button><h3>${schema.title}</h3><form id="${formId}" class="modal-form flex flex-col gap-5"></form><div class="flex justify-end gap-2 pt-2"><button class="btn btn-outline btn-sm" data-close>Cancelar</button><button class="btn btn-success btn-sm" type="submit" form="${formId}">Guardar</button></div></div></div>`;
-        document.body.style.overflow='hidden';
-        const form = modalHost.querySelector('form');
-        schema.fields.forEach(f=>{
-          const row=document.createElement('div'); row.className='form-row';
-          row.innerHTML = `<label>${f.label}${f.required?' *':''}</label>${buildInput(f, data? data[f.name]: null, f.name)}`;
-          form.appendChild(row);
-        });
-        modalHost.addEventListener('click', e=>{ if(e.target.matches('[data-close]') || e.target===modalHost.querySelector('.modal-overlay')) closeModal(); });
-        form.addEventListener('submit', async (e)=>{
-          e.preventDefault();
-          const payload={}; let valid=true;
-          schema.fields.forEach(f=>{
-            const el=form.querySelector(`[name="${f.name}"]`); if(!el) return; const val=el.value.trim(); if(f.required && !val){ valid=false; el.classList.add('ring-2','ring-red-400'); setTimeout(()=>el.classList.remove('ring-2','ring-red-400'),1500); } payload[f.name]= val || null; });
-          if(!valid){ showToast('error','Completa campos requeridos'); return; }
-          try {
-            const endpoint = data && data.__endpoint ? data.__endpoint : schema.endpoint;
-            const method = data && data.__method ? data.__method : schema.method;
-            const res = await fetch(endpoint, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            const j= await res.json();
-            if(!j.ok){ showToast('error', j.message||'Error'); return; }
-            showToast('success','Guardado');
-            closeModal();
-            reloadCatalogPartial();
-          } catch(err){ showToast('error','Fallo red'); }
-        });
-        // Cargar selects dinámicos
-        schema.fields.filter(f=>f.type==='select' && f.optionsSource).forEach(async f=>{
-          const sel=form.querySelector(`[name="${f.name}"]`); if(!sel) return; sel.innerHTML='<option value="">Cargando...</option>';
-            try { const r= await fetch(f.optionsSource); const j= await r.json(); if(j.ok){ sel.innerHTML='<option value="">Seleccione...</option>'+ j.data.map(o=>`<option value="${o[f.optionValue]}">${o[f.optionLabel]}</option>`).join(''); if(data && data[f.name]) sel.value=data[f.name]; } else sel.innerHTML='<option value="">Error</option>'; } catch(e){ sel.innerHTML='<option value="">Error</option>'; }
-        });
-        initIconPicker();
-      }
-      function buildInput(f, value, fieldName){
-        if(fieldName==='icono'){
-          const current = value || '';
-          return `<div class="icon-picker-wrapper relative">
-            <input type="hidden" name="icono" value="${current}" />
-            <button type="button" class="icon-picker-trigger" data-icon-trigger>
-              <span class="icon-preview" data-icon-preview>${ current ? (window.getIconSvg? window.getIconSvg(current): current) : '🌿' }</span>
-              <span>${ current || 'Elegir icono' }</span>
-            </button>
-          </div>`;
-        }
-        if(f.type==='textarea') return `<textarea name="${f.name}" class="input-modern" rows="3">${value? value: ''}</textarea>`;
-        if(f.type==='number') return `<input type="number" step="any" name="${f.name}" value="${value? value: ''}" class="input-modern" />`;
-        if(f.type==='select-static') return `<select name="${f.name}" class="input-modern">${f.options.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}</select>`;
-        if(f.type==='select') return `<select name="${f.name}" class="input-modern"><option value="">Cargando...</option></select>`;
-        return `<input type="text" name="${f.name}" value="${value? value: ''}" class="input-modern" />`;
-      }
-      function initIconPicker(){
-        const trigger = modalHost.querySelector('[data-icon-trigger]'); if(!trigger || !window.CATALOG_ICONS) return;
-        const wrapper = trigger.closest('.icon-picker-wrapper');
-        let panel; const hidden = wrapper.querySelector('input[name=icono]'); const preview = wrapper.querySelector('[data-icon-preview]');
-        function closePanel(){ panel && panel.remove(); panel=null; document.removeEventListener('click', outside); }
-        function outside(e){ if(panel && !panel.contains(e.target) && !trigger.contains(e.target)){ closePanel(); } }
-        trigger.addEventListener('click', ()=>{
-          if(panel){ closePanel(); return; }
-          panel = document.createElement('div'); panel.className='icon-picker-panel';
-          panel.innerHTML = window.CATALOG_ICONS.map(ic=>`<div class="icon-picker-item" data-icon-value="${ic.key}"><div class="ico">${ic.svg}</div><span>${ic.label}</span></div>`).join('');
-          wrapper.style.position='relative'; wrapper.appendChild(panel);
-          setTimeout(()=> document.addEventListener('click', outside),10);
-          panel.querySelectorAll('[data-icon-value]').forEach(item=>{
-            item.addEventListener('click', ()=>{
-              const val=item.getAttribute('data-icon-value'); hidden.value=val; if(preview){ preview.innerHTML= window.getIconSvg(val) || val; }
-              trigger.querySelector('span:last-child').textContent=val; closePanel();
-            });
-          });
-        });
-      }
-
-      async function reloadCatalogPartial(){
-        try {
-          const r= await fetch('/catalogo'); if(!r.ok) return; const html= await r.text();
-          const parser=new DOMParser(); const doc=parser.parseFromString(html,'text/html');
-          const newUnified = doc.getElementById('catalogGrid');
-          if(newUnified){
-            const target = document.getElementById('catalogGrid');
-            if(target){ target.innerHTML = newUnified.innerHTML; }
-            showToast('success','Catálogo actualizado');
-            attachCrudHandlers();
-            hydrateCategoryIcons();
-            setupTileInteractions();
-            // initUnifiedToolbar(); // legacy grid disabled
-          }
-        } catch(e){ /* silent */ }
-      }
-      document.querySelectorAll('[data-open-modal]').forEach(btn=>{
-        btn.addEventListener('click', ()=> openModal(btn.getAttribute('data-open-modal')));
-      });
-      function attachCrudHandlers(){
-        document.querySelectorAll('[data-edit]').forEach(b=>{
-          b.addEventListener('click', async ()=>{
-            const entity=b.getAttribute('data-edit');
-            const id=b.getAttribute('data-id');
-            const map={
-              'categoria-cultivo': { url:'/api/catalogo/categorias-cultivo/'+id, schema:'createCategoriaCultivo', endpoint:'/api/catalogo/categorias-cultivo/'+id, method:'PUT' },
-              'tipo-cultivo': { url:'/api/catalogo/tipos-cultivo/'+id, schema:'createTipoCultivo', endpoint:'/api/catalogo/tipos-cultivo/'+id, method:'PUT' },
-              'variedad-cultivo': { url:'/api/catalogo/variedades-cultivo/'+id, schema:'createVariedadCultivo', endpoint:'/api/catalogo/variedades-cultivo/'+id, method:'PUT' },
-              'categoria-insumo': { url:'/api/catalogo/categorias-insumo/'+id, schema:'createCategoriaInsumo', endpoint:'/api/catalogo/categorias-insumo/'+id, method:'PUT' },
-              'insumo': { url:'/api/catalogo/insumos/'+id, schema:'createInsumo', endpoint:'/api/catalogo/insumos/'+id, method:'PUT' }
-            };
-            const cfg=map[entity]; if(!cfg) return;
-            try { const r= await fetch(cfg.url); const j=await r.json(); if(j.ok){ const data=j.data; data.__schema=cfg.schema; data.__endpoint=cfg.endpoint; data.__method=cfg.method; openModal(cfg.schema, data); setTimeout(()=>{ const box=document.querySelector('.modal-box'); if(box){ box.querySelector('h3').textContent='Editar'; const sb=box.querySelector('button[type=submit]'); if(sb) sb.textContent='Actualizar'; }},20); } else showToast('error','No encontrado'); } catch(e){ showToast('error','Error cargando'); }
-          });
-        });
-        document.querySelectorAll('[data-delete]').forEach(b=>{
-          b.addEventListener('click', async ()=>{
-            const entity=b.getAttribute('data-delete');
-            const id=b.getAttribute('data-id');
-            if(!confirm('¿Eliminar registro?')) return;
-            const map={
-              'categoria-cultivo': '/api/catalogo/categorias-cultivo/'+id,
-              'tipo-cultivo': '/api/catalogo/tipos-cultivo/'+id,
-              'variedad-cultivo': '/api/catalogo/variedades-cultivo/'+id,
-              'categoria-insumo': '/api/catalogo/categorias-insumo/'+id,
-              'insumo': '/api/catalogo/insumos/'+id
-            };
-            try { const r= await fetch(map[entity], { method:'DELETE' }); const j= await r.json(); if(j.ok){ showToast('success','Eliminado'); reloadCatalogPartial(); } else showToast('error', j.message||'Error'); } catch(e){ showToast('error','Fallo'); }
-          });
-        });
-      }
-      attachCrudHandlers();
-  // initUnifiedToolbar(); // legacy grid disabled
-    })();
+    // Catálogo legacy desactivado (uso de catalogo.js)
   });
 })();
 
@@ -545,6 +282,7 @@ function initUnifiedToolbar(){
 }
 
 // --- Utilitarian Catalog Tabs (list-based new layout) ---
+/* LEGACY catalog tabs (disabled: handled by catalogo.js)
 function initCatalogTabs(){
   const root = document.querySelector('.catalog-util');
   if(!window.__CATALOG_DEBUG){ window.__CATALOG_DEBUG = { steps:[], errors:[], tsStart: Date.now() }; }
@@ -910,6 +648,7 @@ function initCatalogTabs(){
   try { dbg.steps.push('initCatalogTabs:complete'); } catch(_e){}
   window.__CATALOG_DEBUG_LAST = dbg;
 }
+*/
 
 // Hook new layout init
-document.addEventListener('DOMContentLoaded', ()=>{ try { initCatalogTabs(); } catch(_e){} });
+// document.addEventListener('DOMContentLoaded', ()=>{ try { initCatalogTabs(); } catch(_e){} }); // legacy disabled

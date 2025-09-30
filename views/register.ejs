@@ -17,6 +17,12 @@
         <div class="alert-error"><%= error %></div>
       <% } %>
       <form action="/auth/register" method="POST" style="display:flex; flex-direction:column; gap:18px;">
+        <style>
+          .auth-box .field { position:relative; }
+          .auth-box .field input { width:100%; padding:12px 44px 12px 46px; border:1px solid #cbd5e1; border-radius:12px; font-size:.8rem; background:#f8fafc; transition:.25s; }
+          .auth-box .field input:focus { outline:none; border-color:#1B4DFF; background:#fff; box-shadow:0 0 0 3px #1B4DFF33; }
+          .auth-box .field svg { position:absolute; left:14px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:#64748b; pointer-events:none; }
+        </style>
         <div class="field">
           <input type="text" name="nombre" placeholder="Nombre" required autocomplete="given-name" />
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z"/></svg>

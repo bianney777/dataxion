@@ -18,17 +18,9 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
-// Routes
+// Rutas API principales
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/dashboard', require('./routes/dashboard'));
-
-
-// ✅ Essential middleware to parse JSON
-app.use(express.json());
-
-// ✅ Import and use your auth routes
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes); // Correctly mounts routes under /api/auth
 
 
 // Configuración de EJS
@@ -41,6 +33,16 @@ app.use(express.urlencoded({ extended: true }));
 
 // Middleware de autenticación
 const ensureAuthenticated = require('./middleware/auth');
+
+// No-cache para rutas protegidas (colocado antes de definición de rutas protegidas)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/dashboard') || req.path.startsWith('/ciclos') || req.path.startsWith('/catalogo') || req.path.startsWith('/gestionfinca') ) {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+  }
+  next();
+});
 
 
 // Página de inicio
@@ -58,8 +60,22 @@ app.get('/', (req, res) => {
   res.render('index');
 });
 
-// Usar rutas /auth/login y /auth/register desde routes/auth.js
+// Ruta de estado de salud /health (útil para ngrok / monitoreo)
+app.get('/health', (req,res)=>{
+  res.json({ ok:true, time: Date.now() });
+});
+
+// Rutas de autenticación vistas
 app.use('/auth', require('./routes/auth'));
+
+// Exponer branding en plantillas
+app.locals.brand = {
+  nombre: 'DataXion',
+  slogan: 'Cultivando decisiones inteligentes',
+  colorPrimario: '#1B4DFF',
+  colorSecundario: '#0A2A6B',
+  colorAcento: '#3CCB7F'
+};
 
 
 
@@ -69,10 +85,20 @@ app.get('/dashboard', ensureAuthenticated, (req, res) => {
   res.render('dashboard', { user: req.user || null });
 });
 
+// Asegurar que al hacer logout no se pueda volver con back cacheado
+
 app.use('/gestionfinca', require('./routes/gestionfinca'));
 app.use('/catalogo', require('./routes/catalogo'));
 // API catálogo agrícola CRUD
 app.use('/api/catalogo', require('./routes/catalogoApi'));
+// Branding / identidad visual
+app.use('/branding', require('./routes/branding'));
+// Ciclos de cultivo (vista + API)
+app.use('/ciclos', require('./routes/ciclos'));
+app.use('/api/ciclos', require('./routes/ciclosApi'));
+app.use('/api/cultivos', require('./routes/cultivosApi'));
+// API hitos de ciclos
+app.use('/api', require('./routes/ciclosHitosApi'));
 
 // Cerrar sesión
 app.get('/logout', (req, res) => {
@@ -82,3 +108,10 @@ app.get('/logout', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
