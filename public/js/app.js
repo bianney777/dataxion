@@ -385,7 +385,9 @@
             const el=form.querySelector(`[name="${f.name}"]`); if(!el) return; const val=el.value.trim(); if(f.required && !val){ valid=false; el.classList.add('ring-2','ring-red-400'); setTimeout(()=>el.classList.remove('ring-2','ring-red-400'),1500); } payload[f.name]= val || null; });
           if(!valid){ showToast('error','Completa campos requeridos'); return; }
           try {
-            const res = await fetch(schema.endpoint, { method:schema.method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            const endpoint = data && data.__endpoint ? data.__endpoint : schema.endpoint;
+            const method = data && data.__method ? data.__method : schema.method;
+            const res = await fetch(endpoint, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
             const j= await res.json();
             if(!j.ok){ showToast('error', j.message||'Error'); return; }
             showToast('success','Guardado');
@@ -435,19 +437,7 @@
               'insumo': { url:'/api/catalogo/insumos/'+id, schema:'createInsumo', endpoint:'/api/catalogo/insumos/'+id, method:'PUT' }
             };
             const cfg=map[entity]; if(!cfg) return;
-            try { const r= await fetch(cfg.url); const j= await r.json(); if(j.ok){ const data=j.data; data.__schema=cfg.schema; openModal(cfg.schema, data); // luego ajustar método
-              setTimeout(()=>{ // mutar método & endpoint a update
-                const form = document.querySelector('.modal-box form'); if(form){ form.closest('.modal-box').querySelector('h3').innerHTML='Editar'; }
-                // Override submit handler
-                const schemaKey=cfg.schema; const schemasBtn=document.querySelectorAll('.modal-box button[type=submit]'); schemasBtn.forEach(sb=> sb.textContent='Actualizar');
-                const schemaOriginalEndpoint = cfg.endpoint; const schemaOriginalMethod=cfg.method;
-                // Cambiar dataset para interceptar
-                form.dataset.endpoint = schemaOriginalEndpoint; form.dataset.method = schemaOriginalMethod;
-                form.addEventListener('submit', function override(e){
-                  if(!form.dataset.method) return; // already handled previously
-                }, { once:true });
-              }, 40);
-            } else showToast('error','No encontrado'); } catch(e){ showToast('error','Error cargando'); }
+            try { const r= await fetch(cfg.url); const j= await r.json(); if(j.ok){ const data=j.data; data.__schema=cfg.schema; data.__endpoint=cfg.endpoint; data.__method=cfg.method; openModal(cfg.schema, data); setTimeout(()=>{ const box=document.querySelector('.modal-box'); if(box){ box.querySelector('h3').textContent='Editar'; const sb=box.querySelector('button[type=submit]'); if(sb) sb.textContent='Actualizar'; }},20); } else showToast('error','No encontrado'); } catch(e){ showToast('error','Error cargando'); }
           });
         });
         document.querySelectorAll('[data-delete]').forEach(b=>{
