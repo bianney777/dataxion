@@ -2,59 +2,69 @@
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { sendVerificationEmail } = require('../modules/mailer');
 
 const authController = {
-  async register(req, res) {
+  async register(req,res){
     try {
-      const { id_rol, nombre, apellido, email, contrasena, telefono, direccion } = req.body;
-
-      // Check if user already exists
-      const existingUser = await User.findByEmail(email);
-      if (existingUser) {
-        return res.status(400).json({ message: 'El usuario ya existe' });
+      const { id_rol, nombre, apellido, email, contrasena, contrasena_confirm, telefono, direccion } = req.body;
+      const normEmail = (email || '').trim().toLowerCase();
+      // Validaciones básicas
+      const errors = [];
+      if(!normEmail) errors.push('El correo es obligatorio.');
+      else if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normEmail)) errors.push('Formato de correo inválido.');
+      if(!contrasena) errors.push('La contraseña es obligatoria.');
+      if(contrasena && contrasena.length < 8) errors.push('La contraseña debe tener al menos 8 caracteres.');
+      if(contrasena && !/[A-ZÁÉÍÓÚ]/.test(contrasena)) errors.push('Incluye al menos una letra mayúscula.');
+      if(contrasena && !/[a-záéíóú]/.test(contrasena)) errors.push('Incluye al menos una letra minúscula.');
+      if(contrasena && !/[0-9]/.test(contrasena)) errors.push('Incluye al menos un número.');
+      if(contrasena && !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(contrasena)) errors.push('Incluye al menos un símbolo.');
+      if(contrasena && contrasena_confirm && contrasena !== contrasena_confirm) errors.push('Las contraseñas no coinciden.');
+      if(errors.length){
+        return res.status(400).render('register', { error: errors.join(' ') });
       }
-
-      // Create new user
-      const userId = await User.create({
-        id_rol, nombre, apellido, email, contrasena, telefono, direccion
-      });
-
-      res.status(201).json({ 
-        message: 'Usuario registrado exitosamente', 
-        userId 
-      });
-    } catch (error) {
-      res.status(500).json({ message: 'Error del servidor', error: error.message });
+      const existing = await User.findByEmail(normEmail);
+      if(existing){
+        return res.status(400).render('register', { error: 'El usuario ya existe.' });
+      }
+      const created = await User.create({ id_rol, nombre, apellido, email: normEmail, contrasena, telefono, direccion });
+      const baseUrl = process.env.APP_BASE_URL || (req.protocol + '://' + req.get('host'));
+      sendVerificationEmail(normEmail, created.tokenVerificacion, baseUrl).catch(err=> console.error('[mailer] error verificación:', err.message));
+      // Autologin aunque estado sea pendiente
+      const tokenJWT = jwt.sign({ id: created.id, role: id_rol || 2 }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1h' });
+      res.cookie('token', tokenJWT, { httpOnly: true });
+      return res.redirect('/dashboard?pending=1');
+    } catch(e){
+      res.status(500).json({ ok:false, message:'Error del servidor', error: e.message });
     }
   },
-
-  async login(req, res) {
+  async verify(req,res){
+    try {
+      const { token } = req.query;
+      if(!token) return res.status(400).send('Token requerido');
+      const account = await User.verifyAccount(token);
+      if(!account) return res.status(400).send('Token inválido o cuenta ya verificada');
+      // Emitir JWT inmediato (autologin tras verificación).
+      const sessionToken = jwt.sign({ id: account.id, role: account.role }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1h' });
+      res.cookie('token', sessionToken, { httpOnly: true });
+      res.redirect('/dashboard?activated=1&autologin=1');
+    } catch(e){ res.status(500).send('Error verificando cuenta'); }
+  },
+  async login(req,res){
     try {
       const { email, contrasena } = req.body;
-      
-      // Find user by email
       const user = await User.findByEmail(email);
-      if (!user) {
-        return res.status(400).json({ message: 'Credenciales inválidas' });
-      }
-
-      // Compare passwords
-      const isMatch = await bcrypt.compare(contrasena, user.contrasena);
-      if (!isMatch) {
-        return res.status(400).json({ message: 'Credenciales inválidas' });
-      }
-
-      // Create and assign JWT token
-      const token = jwt.sign(
-        { id: user.id_usuario, role: user.id_rol }, 
-        process.env.JWT_SECRET || 'your_jwt_secret',
-        { expiresIn: '1h' }
-      );
-
+      if(!user) return res.status(400).render('login', { error: 'Credenciales inválidas (usuario no encontrado)' });
+      if(user.estado === 'inactivo') return res.status(403).render('login', { error: 'Tu cuenta está inactiva. Contacta soporte.' });
+      const passOk = await bcrypt.compare(contrasena, user.contrasena);
+      if(!passOk) return res.status(400).render('login', { error: 'Contraseña incorrecta.' });
+      await User.updateLastAccess(user.id_usuario);
+      const token = jwt.sign({ id: user.id_usuario, role: user.id_rol }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1h' });
       res.cookie('token', token, { httpOnly: true });
-      res.redirect('/dashboard');
-    } catch (error) {
-      res.status(500).json({ message: 'Error del servidor', error: error.message });
+      // Si pendiente, dashboard mostrará aviso si lee query param (podemos agregar banner allí)
+      res.redirect('/dashboard' + (user.estado === 'pendiente' ? '?pending=1' : ''));
+    } catch(e){
+      res.status(500).render('login', { error: 'Error interno del servidor.' });
     }
   }
 };
