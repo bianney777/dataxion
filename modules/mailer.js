@@ -23,24 +23,25 @@ function buildTransport(){
 
 const transport = buildTransport();
 
-async function sendVerificationEmail(to, token, baseUrl){
-  const verifyLink = `${baseUrl.replace(/\/$/,'')}/auth/verify?token=${token}`;
+async function sendVerificationEmail(to, code){
   const html = `<p>Hola,</p>
-  <p>Gracias por registrarte en <strong>DataXion</strong>. Haz clic en el siguiente enlace para activar tu cuenta:</p>
-  <p><a href="${verifyLink}" target="_blank">Verificar cuenta</a></p>
+  <p>Gracias por registrarte en <strong>DataXion</strong>.</p>
+  <p>Tu código de verificación es:</p>
+  <p style="font-size:24px;font-weight:bold;letter-spacing:4px;">${code}</p>
+  <p>Ingresa este código en la pantalla de verificación para activar tu cuenta (expira al usarse o si registras otro intento).</p>
   <p>Si no fuiste tú, ignora este mensaje.</p>`;
   const info = await transport.sendMail({
     from: process.env.MAIL_FROM || 'no-reply@dataxion.local',
     to,
-    subject: 'Verifica tu cuenta - DataXion',
+    subject: 'Código de verificación - DataXion',
     html,
-    text: `Visita esta URL para verificar tu cuenta: ${verifyLink}`
+    text: `Tu código de verificación es: ${code}`
   });
   if(info.message){
     console.log('[mailer] Email simulado (no SMTP configurado) =>');
     console.log(info.message.toString());
   } else {
-    console.log('[mailer] Email de verificación enviado a', to);
+    console.log('[mailer] Código de verificación enviado a', to);
   }
 }
 

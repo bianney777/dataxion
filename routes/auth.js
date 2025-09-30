@@ -5,7 +5,12 @@ const authController = require('../controllers/authController');
 
 // Middleware para redirigir si ya está autenticado
 function redirectIfAuth(req, res, next){
-	const token = req.cookies?.token || (req.headers['authorization']?.split(' ')[1]);
+	var token = null;
+	if (req.cookies && req.cookies.token) token = req.cookies.token;
+	else if (req.headers && req.headers['authorization']) {
+		var parts = req.headers['authorization'].split(' ');
+		if (parts.length === 2) token = parts[1];
+	}
 	if(!token) return next();
 	const jwt = require('jsonwebtoken');
 	try {
@@ -22,6 +27,16 @@ router.get('/login', redirectIfAuth, (req, res) => {
 router.get('/register', redirectIfAuth, (req, res) => {
 	res.render('register', { error: null });
 });
+
+// Verificación de cuenta (mostrar formulario si solo pending)
+router.get('/verify', (req,res,next)=>{
+	// Si viene sin code, renderizar formulario
+	if(!req.query.code){
+		return res.render('verify', { error: null, pending: !!req.query.pending });
+	}
+	return authController.verify(req,res,next);
+});
+router.post('/verify', authController.verify);
 
 // Procesar formularios
 router.post('/login', authController.login);

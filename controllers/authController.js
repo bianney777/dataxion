@@ -27,22 +27,22 @@ const authController = {
       if(existing){
         return res.status(400).render('register', { error: 'El usuario ya existe.' });
       }
-      const created = await User.create({ id_rol, nombre, apellido, email: normEmail, contrasena, telefono, direccion });
-      const baseUrl = process.env.APP_BASE_URL || (req.protocol + '://' + req.get('host'));
-      sendVerificationEmail(normEmail, created.tokenVerificacion, baseUrl).catch(err=> console.error('[mailer] error verificación:', err.message));
+  const created = await User.create({ id_rol, nombre, apellido, email: normEmail, contrasena, telefono, direccion });
+  // Enviar código de 6 dígitos
+  sendVerificationEmail(normEmail, created.tokenVerificacion).catch(err=> console.error('[mailer] error verificación:', err.message));
       // Autologin aunque estado sea pendiente
       const tokenJWT = jwt.sign({ id: created.id, role: id_rol || 2 }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1h' });
       res.cookie('token', tokenJWT, { httpOnly: true });
-      return res.redirect('/dashboard?pending=1');
+  return res.redirect('/auth/verify?pending=1');
     } catch(e){
       res.status(500).json({ ok:false, message:'Error del servidor', error: e.message });
     }
   },
   async verify(req,res){
     try {
-      const { token } = req.query;
-      if(!token) return res.status(400).send('Token requerido');
-      const account = await User.verifyAccount(token);
+      const code = (req.query.code || req.body.code || '').trim();
+      if(!code) return res.status(400).render('verify', { error: 'Código requerido', pending:true });
+      const account = await User.verifyAccount(code);
       if(!account) return res.status(400).send('Token inválido o cuenta ya verificada');
       // Emitir JWT inmediato (autologin tras verificación).
       const sessionToken = jwt.sign({ id: account.id, role: account.role }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1h' });

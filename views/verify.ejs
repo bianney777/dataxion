@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Verificar cuenta - DataXion</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; background:#0f172a; color:#fff; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+    .card { background:#1e293b; padding:2rem 2.25rem; border-radius:16px; width:100%; max-width:420px; box-shadow:0 10px 30px -10px rgba(0,0,0,.55); }
+    h1 { font-size:1.4rem; margin:0 0 1rem; }
+    label { display:block; font-size:.85rem; margin-bottom:.4rem; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; }
+    input { width:100%; padding:.9rem 1rem; border:1px solid #334155; background:#0f172a; border-radius:10px; color:#fff; font-size:1.1rem; letter-spacing:.3em; text-align:center; font-weight:600; }
+    input:focus { outline:2px solid #2563eb; outline-offset:2px; }
+    button { width:100%; background:#2563eb; border:none; color:#fff; margin-top:1rem; font-weight:600; padding:.9rem 1rem; border-radius:10px; cursor:pointer; font-size:1rem; }
+    button:hover { background:#1d4ed8; }
+    .msg { margin-top:1rem; font-size:.85rem; line-height:1.3; color:#94a3b8; }
+    .error { background:#dc2626; padding:.75rem 1rem; border-radius:8px; font-size:.85rem; margin-bottom:1rem; }
+    .success { background:#16a34a; padding:.75rem 1rem; border-radius:8px; font-size:.85rem; margin-bottom:1rem; }
+    .brand { font-weight:700; background:linear-gradient(90deg,#3b82f6,#22d3ee); -webkit-background-clip:text; color:transparent; }
+    a { color:#3b82f6; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Verificar cuenta <span class="brand">DataXion</span></h1>
+    <% if (pending) { %>
+      <p class="msg">Te enviamos un código de 6 dígitos a tu correo. Escríbelo aquí para activar tu cuenta.</p>
+    <% } %>
+    <% if (error) { %><div class="error"><%= error %></div><% } %>
+    <form method="POST" action="/auth/verify">
+      <label for="code">Código de verificación</label>
+      <input id="code" name="code" maxlength="6" pattern="[0-9]{6}" required autofocus placeholder="000000" />
+      <button type="submit">Verificar y continuar</button>
+    </form>
+    <div class="msg">¿No recibiste el código? (Futuro: botón reenviar)</div>
+  </div>
+</body>
+</html>
