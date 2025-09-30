@@ -1,8 +1,17 @@
-<% /* Unified marketplace grid placeholder: relies on server variables allCatalog already built earlier or needs build here if not present */ %>
-<% if (!allCatalog) { const allCatalog = [
-  ...categoriasCultivo.map(cat => ({ kind:'cultivo', cat, tipos: (tiposPorCategoria[cat.id_categoria]||[]), count:(tiposPorCategoria[cat.id_categoria]||[]).length })),
-  ...categoriasInsumo.map(cat => ({ kind:'insumo', cat, ins: insumos.filter(i=> i.id_categoria_insumo === cat.id_categoria_insumo), count: insumos.filter(i=> i.id_categoria_insumo === cat.id_categoria_insumo).length }))
-]; } %>
+<% /* Build unified catalog array locally if not provided by controller */
+  const _allCatalog = (typeof allCatalog !== 'undefined' && allCatalog && Array.isArray(allCatalog)) ? allCatalog : [
+    ...((typeof categoriasCultivo !== 'undefined' && Array.isArray(categoriasCultivo)) ? categoriasCultivo : []).map(cat => ({
+      kind:'cultivo',
+      cat,
+      tipos: (typeof tiposPorCategoria !== 'undefined' && tiposPorCategoria && tiposPorCategoria[cat.id_categoria]) ? tiposPorCategoria[cat.id_categoria] : [],
+      count: (typeof tiposPorCategoria !== 'undefined' && tiposPorCategoria && tiposPorCategoria[cat.id_categoria]) ? tiposPorCategoria[cat.id_categoria].length : 0
+    })),
+    ...((typeof categoriasInsumo !== 'undefined' && Array.isArray(categoriasInsumo)) ? categoriasInsumo : []).map(cat => {
+      const insCat = (typeof insumos !== 'undefined' && Array.isArray(insumos)) ? insumos.filter(i=> i.id_categoria_insumo === cat.id_categoria_insumo) : [];
+      return { kind:'insumo', cat, ins: insCat, count: insCat.length };
+    })
+  ];
+%>
 <div class="catalog-toolbar mb-8">
   <div class="toolbar-left">
     <div class="chips-row" id="catalogChips">
@@ -28,22 +37,21 @@
 </div>
 <div class="mb-10">
   <h3 class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">Catálogo <span class="live-badge">LIVE</span></h3>
-  <div class="grid gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4" id="catalogGrid">
-  <% allCatalog.forEach(entry => { const isCultivo = entry.kind==='cultivo'; const cat = entry.cat; const tipos = entry.tipos || []; const insCat = entry.ins || []; %>
-    <div class="catalog-tile group relative" data-kind="<%= entry.kind %>" data-name="<%= cat.nombre_categoria %>" data-entity="<%= entry.kind==='cultivo' ? 'categoria-cultivo' : 'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>">
-      <div class="tile-head flex items-start gap-2">
-        <div class="tile-icon <%= entry.kind==='insumo' ? 'tile-icon-insumo' : '' %>" <%= entry.kind==='cultivo'? 'data-icon-key="'+(cat.icono||'')+'"' : 'data-icon-insumo="'+(cat.tipo||'')+'"' %>><%= entry.kind==='cultivo' ? (cat.icono? cat.icono:'🌿') : '📦' %></div>
-        <div class="flex-1 min-w-0">
-          <div class="flex justify-between gap-2 items-start">
-            <h4 class="tile-title"><%= cat.nombre_categoria %></h4>
-            <span class="tile-count"><%= entry.count %></span>
-          </div>
-          <div class="tile-mini-desc"><%= (cat.descripcion||'').substring(0,48) %><%= (cat.descripcion||'').length>48?'...':'' %></div>
-        </div>
+  <div class="menu-grid" id="catalogGrid">
+  <% _allCatalog.forEach(entry => { const isCultivo = entry.kind==='cultivo'; const cat = entry.cat; const tipos = entry.tipos || []; const insCat = entry.ins || []; %>
+    <div class="catalog-tile menu-tile" data-kind="<%= entry.kind %>" data-name="<%= cat.nombre_categoria %>" data-entity="<%= entry.kind==='cultivo' ? 'categoria-cultivo' : 'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>">
+      <div class="menu-icon-wrapper">
+        <div class="menu-icon <%= entry.kind==='insumo' ? 'menu-icon-insumo' : '' %>" <%= entry.kind==='cultivo'? 'data-icon-key="'+(cat.icono||'')+'"' : 'data-icon-insumo="'+(cat.tipo||'')+'"' %>><%= entry.kind==='cultivo' ? (cat.icono? cat.icono:'🌿') : '📦' %></div>
       </div>
-      <div class="tile-actions opacity-0 group-hover:opacity-100">
-        <button class="btn btn-outline btn-xs" data-edit="<%= entry.kind==='cultivo'? 'categoria-cultivo':'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>">Editar</button>
-        <button class="btn btn-danger btn-xs" data-delete="<%= entry.kind==='cultivo'? 'categoria-cultivo':'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>">X</button>
+      <h4 class="tile-title menu-title" title="<%= cat.nombre_categoria %>"><%= cat.nombre_categoria %></h4>
+      <div class="menu-meta-row">
+        <span class="menu-count" title="Cantidad relacionada"><%= entry.count %></span>
+      </div>
+      <div class="menu-desc" title="<%= cat.descripcion||'' %>"><%= (cat.descripcion||'').substring(0,40) %><%= (cat.descripcion||'').length>40?'…':'' %></div>
+      <!-- Hidden actions kept for quick view logic -->
+      <div class="tile-actions" style="display:none;">
+        <button data-edit="<%= entry.kind==='cultivo'? 'categoria-cultivo':'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>"></button>
+        <button data-delete="<%= entry.kind==='cultivo'? 'categoria-cultivo':'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>"></button>
       </div>
       <div class="tile-detail" hidden>
         <div class="tile-detail-inner">
