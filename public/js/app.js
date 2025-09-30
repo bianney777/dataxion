@@ -520,15 +520,16 @@
         try {
           const r= await fetch('/catalogo'); if(!r.ok) return; const html= await r.text();
           const parser=new DOMParser(); const doc=parser.parseFromString(html,'text/html');
-          const newCultivosGrid=doc.getElementById('cultivosGrid');
-          const newInsumosGrid=doc.getElementById('insumosGrid');
-          if(newCultivosGrid) document.getElementById('cultivosGrid').innerHTML=newCultivosGrid.innerHTML;
-          if(newInsumosGrid) document.getElementById('insumosGrid').innerHTML=newInsumosGrid.innerHTML;
-          showToast('success','Catálogo actualizado');
-          // Reaplicar handlers tras refresco
-          attachCrudHandlers();
-          hydrateCategoryIcons();
-          setupTileInteractions();
+          const newUnified = doc.getElementById('catalogGrid');
+          if(newUnified){
+            const target = document.getElementById('catalogGrid');
+            if(target){ target.innerHTML = newUnified.innerHTML; }
+            showToast('success','Catálogo actualizado');
+            attachCrudHandlers();
+            hydrateCategoryIcons();
+            setupTileInteractions();
+            initUnifiedToolbar();
+          }
         } catch(e){ /* silent */ }
       }
       document.querySelectorAll('[data-open-modal]').forEach(btn=>{
@@ -567,6 +568,57 @@
         });
       }
       attachCrudHandlers();
+      initUnifiedToolbar();
     })();
   });
 })();
+
+// --- Unified Catalog Toolbar Logic ---
+function initUnifiedToolbar(){
+  const grid = document.getElementById('catalogGrid');
+  if(!grid) return; // not on catalog page
+  const chips = document.querySelectorAll('#catalogChips .chip');
+  const search = document.getElementById('catalogSearch');
+  const sortSel = document.getElementById('catalogSort');
+  let activeKind = '';
+  function apply(){
+    const q = (search?.value||'').toLowerCase().trim();
+    const sort = sortSel?.value || 'name_asc';
+    const tiles = Array.from(grid.querySelectorAll('.catalog-tile'));
+    tiles.forEach(t=>{
+      const kind = t.getAttribute('data-kind');
+      const name = (t.getAttribute('data-name')||'').toLowerCase();
+      let show = true;
+      if(activeKind && kind!==activeKind) show=false;
+      if(q && !name.includes(q)) show=false;
+      t.style.display = show? '' : 'none';
+    });
+    // sorting
+    const visible = tiles.filter(t=> t.style.display !== 'none');
+    visible.sort((a,b)=>{
+      const nameA = (a.getAttribute('data-name')||'').toLowerCase();
+      const nameB = (b.getAttribute('data-name')||'').toLowerCase();
+      const countA = parseInt(a.querySelector('.tile-count')?.textContent)||0;
+      const countB = parseInt(b.querySelector('.tile-count')?.textContent)||0;
+      switch(sort){
+        case 'name_desc': return nameB.localeCompare(nameA);
+        case 'count_desc': return countB - countA;
+        case 'count_asc': return countA - countB;
+        case 'name_asc':
+        default: return nameA.localeCompare(nameB);
+      }
+    });
+    visible.forEach(t=> grid.appendChild(t));
+  }
+  chips.forEach(c=>{
+    c.addEventListener('click', ()=>{
+      chips.forEach(o=> o.classList.remove('active'));
+      c.classList.add('active');
+      activeKind = c.getAttribute('data-chip')||'';
+      apply();
+    });
+  });
+  search && search.addEventListener('input', debounce(apply,250));
+  sortSel && sortSel.addEventListener('change', apply);
+  apply();
+}

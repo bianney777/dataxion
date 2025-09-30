@@ -1,0 +1,95 @@
+<% /* Unified marketplace grid placeholder: relies on server variables allCatalog already built earlier or needs build here if not present */ %>
+<% if (!allCatalog) { const allCatalog = [
+  ...categoriasCultivo.map(cat => ({ kind:'cultivo', cat, tipos: (tiposPorCategoria[cat.id_categoria]||[]), count:(tiposPorCategoria[cat.id_categoria]||[]).length })),
+  ...categoriasInsumo.map(cat => ({ kind:'insumo', cat, ins: insumos.filter(i=> i.id_categoria_insumo === cat.id_categoria_insumo), count: insumos.filter(i=> i.id_categoria_insumo === cat.id_categoria_insumo).length }))
+]; } %>
+<div class="catalog-toolbar mb-8">
+  <div class="toolbar-left">
+    <div class="chips-row" id="catalogChips">
+      <button class="chip active" data-chip="">Todo</button>
+      <button class="chip" data-chip="cultivo">Cultivos</button>
+      <button class="chip" data-chip="insumo">Insumos</button>
+    </div>
+  </div>
+  <div class="toolbar-center">
+    <div class="search-box">
+      <input id="catalogSearch" type="text" placeholder="Buscar cultivos, tipos o insumos...">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+    </div>
+  </div>
+  <div class="toolbar-right">
+    <select id="catalogSort" class="sort-select">
+      <option value="name_asc">Nombre A-Z</option>
+      <option value="name_desc">Nombre Z-A</option>
+      <option value="count_desc">Más elementos</option>
+      <option value="count_asc">Menos elementos</option>
+    </select>
+  </div>
+</div>
+<div class="mb-10">
+  <h3 class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">Catálogo <span class="live-badge">LIVE</span></h3>
+  <div class="grid gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4" id="catalogGrid">
+  <% allCatalog.forEach(entry => { const isCultivo = entry.kind==='cultivo'; const cat = entry.cat; const tipos = entry.tipos || []; const insCat = entry.ins || []; %>
+    <div class="catalog-tile group relative" data-kind="<%= entry.kind %>" data-name="<%= cat.nombre_categoria %>" data-entity="<%= entry.kind==='cultivo' ? 'categoria-cultivo' : 'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>">
+      <div class="tile-head flex items-start gap-2">
+        <div class="tile-icon <%= entry.kind==='insumo' ? 'tile-icon-insumo' : '' %>" <%= entry.kind==='cultivo'? 'data-icon-key="'+(cat.icono||'')+'"' : 'data-icon-insumo="'+(cat.tipo||'')+'"' %>><%= entry.kind==='cultivo' ? (cat.icono? cat.icono:'🌿') : '📦' %></div>
+        <div class="flex-1 min-w-0">
+          <div class="flex justify-between gap-2 items-start">
+            <h4 class="tile-title"><%= cat.nombre_categoria %></h4>
+            <span class="tile-count"><%= entry.count %></span>
+          </div>
+          <div class="tile-mini-desc"><%= (cat.descripcion||'').substring(0,48) %><%= (cat.descripcion||'').length>48?'...':'' %></div>
+        </div>
+      </div>
+      <div class="tile-actions opacity-0 group-hover:opacity-100">
+        <button class="btn btn-outline btn-xs" data-edit="<%= entry.kind==='cultivo'? 'categoria-cultivo':'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>">Editar</button>
+        <button class="btn btn-danger btn-xs" data-delete="<%= entry.kind==='cultivo'? 'categoria-cultivo':'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>">X</button>
+      </div>
+      <div class="tile-detail" hidden>
+        <div class="tile-detail-inner">
+          <p class="detail-desc"><%= cat.descripcion || 'Sin descripción.' %></p>
+          <% if (isCultivo) { %>
+            <% if (tipos.length) { %>
+              <div class="detail-section">
+                <div class="detail-section-title">Tipos (<%= tipos.length %>)</div>
+                <div class="mini-bars" data-bars="dias"></div>
+                <ul class="detail-list">
+                  <% tipos.forEach(t => { %>
+                    <li class="detail-item" data-entity="tipo-cultivo" data-id="<%= t.id_tipo_cultivo %>" <%= t.dias_cosecha? 'data-dias="'+t.dias_cosecha+'"':'' %>>
+                      <div class="name-row"><span class="n"><%= t.nombre_tipo %></span><% if (t.dias_cosecha) { %><span class="d"><%= t.dias_cosecha %> d</span><% } %></div>
+                      <% if (t.temporada_optima) { %><div class="meta">Temporada: <%= t.temporada_optima %></div><% } %>
+                      <% if (t.descripcion) { %><div class="text"><%= t.descripcion.substring(0,120) %><%= t.descripcion.length>120?'...':'' %></div><% } %>
+                      <div class="actions"><button class="btn btn-outline btn-xs" data-edit="tipo-cultivo" data-id="<%= t.id_tipo_cultivo %>">Editar</button><button class="btn btn-danger btn-xs" data-delete="tipo-cultivo" data-id="<%= t.id_tipo_cultivo %>">X</button></div>
+                    </li>
+                  <% }) %>
+                </ul>
+              </div>
+            <% } else { %>
+              <div class="text-[11px] text-slate-400">Sin tipos registrados.</div>
+            <% } %>
+          <% } else { %>
+            <% if (insCat.length) { %>
+              <div class="detail-section">
+                <div class="detail-section-title">Insumos (<%= insCat.length %>)</div>
+                <div class="mini-bars" data-bars="insumos"></div>
+                <ul class="detail-list">
+                  <% insCat.forEach(ins => { %>
+                    <li class="detail-item" data-entity="insumo" data-id="<%= ins.id_insumo %>" <%= ins.tipo? 'data-tipo="'+ins.tipo+'"':'' %>>
+                      <div class="name-row"><span class="n"><%= ins.nombre_insumo %></span><% if (ins.fabricante) { %><span class="d"><%= ins.fabricante %></span><% } %></div>
+                      <% if (ins.tipo) { %><div class="meta">Tipo: <%= ins.tipo %></div><% } %>
+                      <% if (ins.descripcion) { %><div class="text"><%= ins.descripcion.substring(0,120) %><%= ins.descripcion.length>120?'...':'' %></div><% } %>
+                      <div class="actions"><button class="btn btn-outline btn-xs" data-edit="insumo" data-id="<%= ins.id_insumo %>">Editar</button><button class="btn btn-danger btn-xs" data-delete="insumo" data-id="<%= ins.id_insumo %>">X</button></div>
+                    </li>
+                  <% }) %>
+                </ul>
+              </div>
+            <% } else { %>
+              <div class="text-[11px] text-slate-400">Sin insumos registrados.</div>
+            <% } %>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  <% }) %>
+  </div>
+</div>
