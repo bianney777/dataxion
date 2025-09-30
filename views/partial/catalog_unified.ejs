@@ -39,15 +39,10 @@
   <h3 class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">Catálogo <span class="live-badge">LIVE</span></h3>
   <div class="menu-grid" id="catalogGrid">
   <% _allCatalog.forEach(entry => { const isCultivo = entry.kind==='cultivo'; const cat = entry.cat; const tipos = entry.tipos || []; const insCat = entry.ins || []; %>
-    <div class="catalog-tile menu-tile" data-kind="<%= entry.kind %>" data-name="<%= cat.nombre_categoria %>" data-entity="<%= entry.kind==='cultivo' ? 'categoria-cultivo' : 'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>">
-      <div class="menu-icon-wrapper">
+    <div class="catalog-tile menu-tile icon-only" data-kind="<%= entry.kind %>" data-name="<%= cat.nombre_categoria %>" data-entity="<%= entry.kind==='cultivo' ? 'categoria-cultivo' : 'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>" aria-label="<%= cat.nombre_categoria %>" title="<%= cat.nombre_categoria %>">
+      <div class="menu-icon-wrapper only">
         <div class="menu-icon <%= entry.kind==='insumo' ? 'menu-icon-insumo' : '' %>" <%= entry.kind==='cultivo'? 'data-icon-key="'+(cat.icono||'')+'"' : 'data-icon-insumo="'+(cat.tipo||'')+'"' %>><%= entry.kind==='cultivo' ? (cat.icono? cat.icono:'🌿') : '📦' %></div>
       </div>
-      <h4 class="tile-title menu-title" title="<%= cat.nombre_categoria %>"><%= cat.nombre_categoria %></h4>
-      <div class="menu-meta-row">
-        <span class="menu-count" title="Cantidad relacionada"><%= entry.count %></span>
-      </div>
-      <div class="menu-desc" title="<%= cat.descripcion||'' %>"><%= (cat.descripcion||'').substring(0,40) %><%= (cat.descripcion||'').length>40?'…':'' %></div>
       <!-- Hidden actions kept for quick view logic -->
       <div class="tile-actions" style="display:none;">
         <button data-edit="<%= entry.kind==='cultivo'? 'categoria-cultivo':'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>"></button>

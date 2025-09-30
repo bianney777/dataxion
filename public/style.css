@@ -369,6 +369,10 @@ html.dark .live-badge { background:#16a34a; }
 /* --- Minimal Menu Tiles --- */
 .menu-grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); }
 .menu-tile { border-radius:20px; padding:16px 14px 18px; min-height:160px; background:linear-gradient(135deg,#ffffff,#f1f5f9); border:1px solid #e2e8f0; display:flex; flex-direction:column; align-items:center; gap:10px; cursor:pointer; transition:.28s; box-shadow:0 2px 8px rgba(0,0,0,0.05); position:relative; }
+.menu-tile.icon-only { min-height:110px; padding:18px 14px; gap:12px; }
+.menu-tile.icon-only .menu-icon-wrapper.only { width:70px; height:70px; border-radius:22px; }
+.menu-tile.icon-only .menu-icon { font-size:40px; }
+@media (max-width:640px){ .menu-tile.icon-only { min-height:100px; } .menu-tile.icon-only .menu-icon-wrapper.only { width:62px; height:62px; border-radius:20px; } .menu-tile.icon-only .menu-icon { font-size:34px; } }
 .menu-tile:hover { transform:translateY(-5px); box-shadow:0 14px 34px -12px rgba(0,0,0,0.18); }
 html.dark .menu-tile { background:linear-gradient(135deg,#1e293b,#0f172a); border-color:#334155; box-shadow:0 2px 6px rgba(0,0,0,0.6); }
 .menu-icon-wrapper { width:62px; height:62px; border-radius:20px; display:flex; align-items:center; justify-content:center; background:#f1f5f9; border:1px solid #e2e8f0; position:relative; overflow:hidden; }

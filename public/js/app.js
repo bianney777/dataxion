@@ -328,7 +328,7 @@
         if(existing) existing.remove();
         const id = tile.getAttribute('data-id');
         const kind = tile.getAttribute('data-kind');
-        const title = tile.querySelector('.tile-title')?.textContent || '';
+  const title = tile.querySelector('.tile-title')?.textContent || tile.getAttribute('data-name') || '';
         const iconKey = tile.querySelector('.tile-icon')?.getAttribute('data-icon-key') || '';
         const iconRaw = iconKey && window.getIconSvg ? window.getIconSvg(iconKey) : (tile.querySelector('.tile-icon')?.innerHTML || '🌿');
         const detailSource = tile.querySelector('.tile-detail-inner');
