@@ -50,6 +50,20 @@ const authController = {
       res.redirect('/dashboard?activated=1&autologin=1');
     } catch(e){ res.status(500).send('Error verificando cuenta'); }
   },
+  async verifyCodeApi(req,res){
+    try {
+      const { code } = req.body || {};
+      if(!code || !/^\d{6}$/.test(code)) return res.status(400).json({ ok:false, message:'Código inválido' });
+      const account = await User.verifyAccount(code.trim());
+      if(!account) return res.status(400).json({ ok:false, message:'Código incorrecto o ya utilizado' });
+      const sessionToken = jwt.sign({ id: account.id, role: account.role }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1h' });
+      res.cookie('token', sessionToken, { httpOnly: true });
+      return res.json({ ok:true, activated:true });
+    } catch(e){
+      console.error('[verifyCodeApi] error', e);
+      res.status(500).json({ ok:false, message:'Error interno' });
+    }
+  },
   async login(req,res){
     try {
       const { email, contrasena } = req.body;

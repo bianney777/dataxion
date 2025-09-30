@@ -42,4 +42,7 @@ router.post('/verify', authController.verify);
 router.post('/login', authController.login);
 router.post('/register', authController.register);
 
+// API JSON para verificar código (usable desde frontend SPA/AJAX)
+router.post('/verify-code', authController.verifyCodeApi);
+
 module.exports = router;
