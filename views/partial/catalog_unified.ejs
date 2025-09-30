@@ -33,16 +33,23 @@
       <option value="count_desc">Más elementos</option>
       <option value="count_asc">Menos elementos</option>
     </select>
+    <button type="button" id="toggleViewBtn" class="btn btn-outline btn-xs ml-2" data-mode="icon">Ver Info</button>
   </div>
 </div>
 <div class="mb-10">
   <h3 class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">Catálogo <span class="live-badge">LIVE</span></h3>
   <div class="menu-grid" id="catalogGrid">
   <% _allCatalog.forEach(entry => { const isCultivo = entry.kind==='cultivo'; const cat = entry.cat; const tipos = entry.tipos || []; const insCat = entry.ins || []; %>
-    <div class="catalog-tile menu-tile icon-only" data-kind="<%= entry.kind %>" data-name="<%= cat.nombre_categoria %>" data-entity="<%= entry.kind==='cultivo' ? 'categoria-cultivo' : 'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>" aria-label="<%= cat.nombre_categoria %>" title="<%= cat.nombre_categoria %>">
+    <div class="catalog-tile menu-tile icon-only" data-kind="<%= entry.kind %>" data-name="<%= cat.nombre_categoria %>" data-count="<%= entry.count %>" data-entity="<%= entry.kind==='cultivo' ? 'categoria-cultivo' : 'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>" aria-label="<%= cat.nombre_categoria %>" title="<%= cat.nombre_categoria %>">
+      <button type="button" class="fav-btn" data-fav-toggle aria-label="Marcar favorito" title="Favorito">★</button>
       <div class="menu-icon-wrapper only">
         <div class="menu-icon <%= entry.kind==='insumo' ? 'menu-icon-insumo' : '' %>" <%= entry.kind==='cultivo'? 'data-icon-key="'+(cat.icono||'')+'"' : 'data-icon-insumo="'+(cat.tipo||'')+'"' %>><%= entry.kind==='cultivo' ? (cat.icono? cat.icono:'🌿') : '📦' %></div>
       </div>
+      <div class="menu-info" hidden>
+        <h4 class="menu-title-full"><%= cat.nombre_categoria %></h4>
+        <div class="menu-line"><span class="menu-badge-count"><%= entry.count %></span><% if(cat.descripcion){ %><span class="menu-snippet"><%= (cat.descripcion||'').substring(0,50) %><%= (cat.descripcion||'').length>50?'…':'' %></span><% } %></div>
+      </div>
+      <div class="tile-tooltip" role="tooltip" hidden></div>
       <!-- Hidden actions kept for quick view logic -->
       <div class="tile-actions" style="display:none;">
         <button data-edit="<%= entry.kind==='cultivo'? 'categoria-cultivo':'categoria-insumo' %>" data-id="<%= entry.kind==='cultivo'? cat.id_categoria : cat.id_categoria_insumo %>"></button>

@@ -7,14 +7,15 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.0/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/css/gestionfinca.css">
-  <script src="/js/app.js" defer></script>
+  <!-- Cargar primero catálogo de iconos para asegurar disponibilidad antes de app.js -->
   <script src="/js/icons.js" defer></script>
+  <script src="/js/app.js" defer></script>
 </head>
 <body>
   <%- include('partial/header') %>
   <div class="layout">
     <%- include('partial/sidebar') %>
-    <div class="feed">
+  <div class="feed">
       <section class="catalog-hero mb-10">
         <div class="hero-bg"></div>
         <div class="hero-content">
@@ -37,7 +38,9 @@
           </div>
         </div>
       </section>
-      <%- include('partial/catalog_unified') %>
+  <!-- Nuevo layout catálogo utilitario -->
+  <%- include('partial/catalog_tabs') %>
+  <!-- Grid legacy eliminado (mantener referencia en git history) -->
 
     </div>
     <aside class="rightbar">

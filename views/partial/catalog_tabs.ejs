@@ -1,0 +1,75 @@
+<% /* Nuevo layout utilitario catálogo */ %>
+<div class="catalog-util" id="catalogUtilRoot">
+  <div class="cu-header">
+    <div class="cu-tabs" role="tablist">
+      <button class="cu-tab active" data-cu-tab="cultivos" role="tab" aria-selected="true">Cultivos (<%= categoriasCultivo.length %>)</button>
+      <button class="cu-tab" data-cu-tab="insumos" role="tab" aria-selected="false">Insumos (<%= categoriasInsumo.length %>)</button>
+    </div>
+    <div class="cu-tools">
+      <div class="cu-search-wrap">
+        <input type="text" id="cuSearch" placeholder="Buscar..." aria-label="Buscar en catálogo" />
+      </div>
+      <select id="cuSort" aria-label="Ordenar" class="cu-sort">
+        <option value="name_asc">Nombre A-Z</option>
+        <option value="name_desc">Nombre Z-A</option>
+        <option value="count_desc">Más elementos</option>
+        <option value="count_asc">Menos elementos</option>
+        <option value="dias_desc">(Cultivos) Mayor promedio días</option>
+        <option value="dias_asc">(Cultivos) Menor promedio días</option>
+      </select>
+      <div class="cu-actions">
+        <button class="btn btn-success btn-xs" id="cuAddPrimary" data-add-ctx="cultivo">+ Categoría</button>
+        <button class="btn btn-outline btn-xs" id="cuAddSecondary" data-add-secondary hidden>+ Tipo</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cu-panels">
+    <div class="cu-panel active" data-cu-panel="cultivos" role="tabpanel">
+      <ul class="cu-list" id="cuListCultivos">
+        <% categoriasCultivo.forEach(cat=> { const tipos = (tiposPorCategoria[cat.id_categoria]||[]); const avg = tipos.length ? Math.round(tipos.filter(t=>t.dias_cosecha).reduce((a,b)=> a + (b.dias_cosecha||0),0) / (tipos.filter(t=>t.dias_cosecha).length||1)) : null; %>
+          <li class="cu-item" data-kind="cultivo" data-id="<%= cat.id_categoria %>" data-name="<%= cat.nombre_categoria %>" data-count="<%= tipos.length %>" data-avg="<%= avg||'' %>">
+            <div class="cu-col main" data-open-qv>
+              <span class="cu-icon" <%= cat.icono? 'data-icon-key="'+cat.icono+'"':'' %>><%= cat.icono || '🌿' %></span>
+              <span class="cu-name"><%= cat.nombre_categoria %></span>
+            </div>
+            <div class="cu-col stats">
+              <span class="cu-metric" title="Tipos de cultivo" data-metric="count"><%= tipos.length %></span>
+              <% if (avg) { %>
+                <span class="cu-metric alt" title="Promedio días cosecha" data-metric="avg"><%= avg %></span>
+              <% } %>
+            </div>
+            <div class="cu-col actions">
+              <button class="btn btn-outline btn-xs" data-edit="categoria-cultivo" data-id="<%= cat.id_categoria %>">Editar</button>
+              <button class="btn btn-outline btn-xs" data-add-tipo data-id="<%= cat.id_categoria %>">+ Tipo</button>
+              <button class="btn btn-danger btn-xs" data-delete="categoria-cultivo" data-id="<%= cat.id_categoria %>">X</button>
+            </div>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+    <div class="cu-panel" data-cu-panel="insumos" role="tabpanel">
+      <ul class="cu-list" id="cuListInsumos">
+        <% categoriasInsumo.forEach(cat=> { const insCat = insumos.filter(i=> i.id_categoria_insumo === cat.id_categoria_insumo); %>
+          <li class="cu-item" data-kind="insumo" data-id="<%= cat.id_categoria_insumo %>" data-name="<%= cat.nombre_categoria %>" data-count="<%= insCat.length %>" data-tipo="<%= cat.tipo||'' %>">
+            <div class="cu-col main" data-open-qv>
+              <span class="cu-icon ins" data-icon-insumo="<%= cat.tipo||'' %>">📦</span>
+              <span class="cu-name"><%= cat.nombre_categoria %></span>
+            </div>
+            <div class="cu-col stats">
+              <span class="cu-metric" title="Insumos en la categoría" data-metric="count"><%= insCat.length %></span>
+              <% if (cat.tipo) { %>
+                <span class="cu-tag"><%= cat.tipo %></span>
+              <% } %>
+            </div>
+            <div class="cu-col actions">
+              <button class="btn btn-outline btn-xs" data-edit="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">Editar</button>
+              <button class="btn btn-outline btn-xs" data-add-insumo data-id="<%= cat.id_categoria_insumo %>">+ Insumo</button>
+              <button class="btn btn-danger btn-xs" data-delete="categoria-insumo" data-id="<%= cat.id_categoria_insumo %>">X</button>
+            </div>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+  </div>
+</div>

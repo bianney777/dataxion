@@ -43,4 +43,58 @@ module.exports = {
   async getInsumo(req,res){ try { const i= await Insumo.findById(req.params.id); if(!i) return fail(res,'No encontrado','NOT_FOUND',404); ok(res,i);} catch(e){ fail(res,'Error'); } },
   async updateInsumo(req,res){ try { const id=req.params.id; const ex=await Insumo.findById(id); if(!ex) return fail(res,'No existe','NOT_FOUND',404); const upd= await Insumo.update(id, req.body); ok(res,upd); } catch(e){ fail(res,e.message); } },
   async deleteInsumo(req,res){ try { const id=req.params.id; await Insumo.delete(id); ok(res,true); } catch(e){ fail(res,'No se pudo eliminar'); } }
+  ,
+  // --- Unificado ---
+  async unified(req,res){
+    try {
+      const [catsCultivo, tipos, catsInsumo, insumos] = await Promise.all([
+        CategoriaCultivo.findAll(),
+        TipoCultivo.findAll(),
+        CategoriaInsumo.findAll(),
+        Insumo.findAll()
+      ]);
+      const tiposMap = tipos.reduce((acc,t)=>{ (acc[t.id_categoria] = acc[t.id_categoria]|| []).push({
+        id: t.id_tipo_cultivo,
+        nombre: t.nombre_tipo,
+        dias_cosecha: t.dias_cosecha || null,
+        temporada: t.temporada_optima || null
+      }); return acc; }, {});
+      const insMap = insumos.reduce((acc,i)=>{ (acc[i.id_categoria_insumo] = acc[i.id_categoria_insumo]|| []).push({
+        id: i.id_insumo,
+        nombre: i.nombre_insumo,
+        fabricante: i.fabricante || null,
+        tipo: i.tipo || null
+      }); return acc; }, {});
+      const data = [
+        ...catsCultivo.map(cat=>({
+          kind:'cultivo',
+            id: cat.id_categoria,
+            nombre: cat.nombre_categoria,
+            icono: cat.icono || null,
+            descripcion: cat.descripcion || null,
+            count: (tiposMap[cat.id_categoria]||[]).length,
+            tipos: tiposMap[cat.id_categoria]||[]
+        })),
+        ...catsInsumo.map(cat=>({
+          kind:'insumo',
+            id: cat.id_categoria_insumo,
+            nombre: cat.nombre_categoria,
+            tipoCategoria: cat.tipo || null,
+            descripcion: cat.descripcion || null,
+            count: (insMap[cat.id_categoria_insumo]||[]).length,
+            insumos: insMap[cat.id_categoria_insumo]||[]
+        }))
+      ];
+      ok(res, data);
+    } catch(e){ console.error(e); fail(res,'Error unificando catálogo'); }
+  },
+  async logEvent(req,res){
+    try {
+      const { action, targetKind, targetId, meta } = req.body || {};
+      if(!action) return fail(res,'action requerido');
+      const payload = { ts: new Date().toISOString(), user: (req.user && req.user.id)||null, action, targetKind: targetKind||null, targetId: targetId||null, meta: meta||null };
+      console.log('[catalog-event]', JSON.stringify(payload));
+      ok(res,true);
+    } catch(e){ fail(res,'No se registró evento'); }
+  }
 };

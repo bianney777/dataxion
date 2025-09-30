@@ -39,4 +39,8 @@ router.post('/insumos', ensureAuthenticated, catalogoCrudController.createInsumo
 router.put('/insumos/:id', ensureAuthenticated, catalogoCrudController.updateInsumo);
 router.delete('/insumos/:id', ensureAuthenticated, catalogoCrudController.deleteInsumo);
 
+// Unificado + eventos
+router.get('/unificado', ensureAuthenticated, catalogoCrudController.unified);
+router.post('/event', ensureAuthenticated, catalogoCrudController.logEvent);
+
 module.exports = router;

@@ -32,6 +32,70 @@ window.CATALOG_ICONS = [
   { key:'harvest', label:'Cosecha', svg:'🌾' },
   { key:'distribution', label:'Distribución', svg:'<svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h7v7H3V3Zm11 0h7v7h-7V3ZM3 14h7v7H3v-7Zm11 0h7v7h-7v-7Z"/></svg>' },
   { key:'eco', label:'Eco', svg:'♻️' }
+  
+  // --- Frutas ---
+  ,{ key:'apple', label:'Manzana', svg:'🍎' }
+  ,{ key:'pear', label:'Pera', svg:'🍐' }
+  ,{ key:'grape', label:'Uva', svg:'🍇' }
+  ,{ key:'banana', label:'Banana', svg:'🍌' }
+  ,{ key:'orange', label:'Naranja', svg:'🍊' }
+  ,{ key:'lemon', label:'Limón', svg:'🍋' }
+  ,{ key:'lime', label:'Lima', svg:'<span class="text-sm">🟢</span>' }
+  ,{ key:'strawberry', label:'Fresa', svg:'🍓' }
+  ,{ key:'blueberry', label:'Arándano', svg:'🫐' }
+  ,{ key:'cherry', label:'Cereza', svg:'🍒' }
+  ,{ key:'peach', label:'Durazno', svg:'🍑' }
+  ,{ key:'watermelon', label:'Sandía', svg:'🍉' }
+  ,{ key:'melon', label:'Melón', svg:'🍈' }
+  ,{ key:'pineapple', label:'Piña', svg:'🍍' }
+  ,{ key:'mango', label:'Mango', svg:'🥭' }
+  ,{ key:'kiwi', label:'Kiwi', svg:'🥝' }
+  ,{ key:'coconut', label:'Coco', svg:'🥥' }
+  ,{ key:'papaya', label:'Papaya', svg:'<span class="text-xs">🥭*</span>' } // * reutiliza mango como aproximación
+  ,{ key:'avocado', label:'Aguacate', svg:'🥑' }
+  ,{ key:'plum', label:'Ciruela', svg:'<span class="text-sm">🟣</span>' }
+  
+  // --- Hortalizas y vegetales ---
+  ,{ key:'tomato', label:'Tomate', svg:'🍅' }
+  ,{ key:'potato', label:'Papa', svg:'🥔' }
+  ,{ key:'carrot', label:'Zanahoria', svg:'🥕' }
+  ,{ key:'onion', label:'Cebolla', svg:'🧅' }
+  ,{ key:'garlic', label:'Ajo', svg:'🧄' }
+  ,{ key:'pepper', label:'Pimiento/Chile', svg:'🌶️' }
+  ,{ key:'cucumber', label:'Pepino', svg:'🥒' }
+  ,{ key:'lettuce', label:'Lechuga', svg:'🥬' }
+  ,{ key:'corn', label:'Maíz', svg:'🌽' }
+  ,{ key:'pumpkin', label:'Calabaza', svg:'🎃' }
+  ,{ key:'broccoli', label:'Brócoli', svg:'🥦' }
+  ,{ key:'mushroom', label:'Hongo', svg:'🍄' }
+  
+  // --- Granos y semillas ---
+  ,{ key:'wheat', label:'Trigo', svg:'🌾' }
+  ,{ key:'rice', label:'Arroz', svg:'🍚' }
+  ,{ key:'bean', label:'Frijol', svg:'🫘' }
+  ,{ key:'soy', label:'Soya', svg:'<span class="text-sm">🟤</span>' }
+  ,{ key:'coffee', label:'Café', svg:'☕' }
+  ,{ key:'cacao', label:'Cacao', svg:'🍫' }
+  ,{ key:'sugarcane', label:'Caña Azúcar', svg:'<svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v18M16 3v18M8 8h8M8 14h8"/></svg>' }
+  ,{ key:'barley', label:'Cebada', svg:'<span class="text-sm">🌿</span>' }
+  ,{ key:'cotton', label:'Algodón', svg:'<svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3a5 5 0 0 0-5 5 5 5 0 0 0-2 9h14a5 5 0 0 0-2-9 5 5 0 0 0-5-5Z"/><path d="M12 12v9"/></svg>' }
+  
+  // --- Frutos secos y especias ---
+  ,{ key:'almond', label:'Almendra', svg:'<span class="text-sm">🟫</span>' }
+  ,{ key:'peanut', label:'Maní', svg:'🥜' }
+  ,{ key:'cashew', label:'Anacardo', svg:'<span class="text-sm">⚪</span>' }
+  ,{ key:'walnut', label:'Nuez', svg:'<span class="text-sm">🤎</span>' }
+  ,{ key:'cinnamon', label:'Canela', svg:'<span class="text-sm">🟤</span>' }
+  ,{ key:'herb', label:'Hierba/Aromática', svg:'🌿' }
+  
+  // --- Oleaginosas / Especiales ---
+  ,{ key:'olive', label:'Olivo', svg:'🫒' }
+  ,{ key:'oliveoil', label:'Aceite Oliva', svg:'<span class="text-sm">🫒🛢️</span>' }
+  ,{ key:'sunflower', label:'Girasol', svg:'🌻' }
+  ,{ key:'agave', label:'Agave', svg:'<span class="text-sm">🟢</span>' }
+  ,{ key:'aloe', label:'Aloe', svg:'<span class="text-sm">💚</span>' }
+  ,{ key:'tobacco', label:'Tabaco', svg:'<span class="text-sm">🚬</span>' }
+  ,{ key:'hemp', label:'Cáñamo', svg:'<span class="text-sm">🌿*</span>' }
 ];
 
 // Utilidad para obtener SVG/emoji por key
