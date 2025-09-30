@@ -17,7 +17,13 @@ module.exports = {
   async deleteCategoriaCultivo(req,res){ try { const id=req.params.id; await CategoriaCultivo.delete(id); ok(res,true); } catch(e){ fail(res,'No se pudo eliminar'); } },
 
   // Tipos cultivo
-  async listTiposCultivo(req,res){ try { ok(res, await TipoCultivo.findAll()); } catch(e){ console.error(e); fail(res,'Error listando tipos'); } },
+  async listTiposCultivo(req,res){
+    try {
+      const { id_categoria } = req.query || {};
+      if(id_categoria){ return ok(res, await TipoCultivo.findByCategoria(id_categoria)); }
+      ok(res, await TipoCultivo.findAll());
+    } catch(e){ console.error(e); fail(res,'Error listando tipos'); }
+  },
   async createTipoCultivo(req,res){ try { const t= await TipoCultivo.create(req.body); ok(res,t); } catch(e){ fail(res,e.message); } },
   async getTipoCultivo(req,res){ try { const t= await TipoCultivo.findById(req.params.id); if(!t) return fail(res,'No encontrado','NOT_FOUND',404); ok(res,t);} catch(e){ fail(res,'Error'); } },
   async updateTipoCultivo(req,res){ try { const id=req.params.id; const ex=await TipoCultivo.findById(id); if(!ex) return fail(res,'No existe','NOT_FOUND',404); const upd= await TipoCultivo.update(id, req.body); ok(res,upd); } catch(e){ fail(res,e.message); } },

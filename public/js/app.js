@@ -34,168 +34,7 @@
 
   /* Global error instrumentation (hotfix: detectar silenciosamente errores que bloquean UI) */
   if(!window.__GLOBAL_ERROR_MONITOR__){
-    window.__GLOBAL_ERROR_MONITOR__ = true;
-    window.addEventListener('error', (e)=>{
-      try {
-        const msg = '[JS Error] '+ (e.message || (e.error && e.error.message) || 'Error desconocido');
-        console.error(msg, e.error||e);
-        if(window.showToast) showToast('error', msg.substring(0,120));
-      } catch(_ignored){}
-    });
-    window.addEventListener('unhandledrejection', (e)=>{
-      try {
-        const reason = e.reason && (e.reason.message || e.reason.toString()) || 'Promise rejection';
-        const msg = '[Promise] '+ reason;
-        console.error(msg, e.reason);
-        if(window.showToast) showToast('error', msg.substring(0,120));
-      } catch(_ignored){}
-    });
-  }
-
-  /* Debounce util */
-  function debounce(fn,wait){ let t; return function(...a){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,a),wait); }; }
-  window.debounce = debounce;
-
-  /* Estados de paginación */
-  const fincaPagination = { page:1, limit:6, pages:1, total:0 };
-  const lotePagination = { page:1, limit:6, pages:1, total:0 };
-  const cacheStore = { fincas:new Map(), lotes:new Map() };
-
-  /* Fetch fincas */
-  function cacheKey(obj){ return Object.entries(obj).sort().map(([k,v])=>k+'='+v).join('&'); }
-  async function fetchFincas(params={}){
-    try {
-      const qs = new URLSearchParams(params).toString();
-      const res = await fetch('/gestionfinca/api/fincas'+(qs?'?'+qs:''));
-      if(!res.ok){ showToast('error','Error cargando fincas'); return []; }
-      const json = await res.json();
-      if(json.pagination){
-        fincaPagination.pages = json.pagination.pages;
-        fincaPagination.total = json.pagination.total;
-        fincaPagination.page = json.pagination.page;
-      }
-      return json.data || json.fincas || [];
-    } catch (e){
-      showToast('error','Fallo de red fincas');
-      return [];
-    }
-  }
-  window.fetchFincas = fetchFincas;
-
-  function renderFincaCard(f){
-    return `<div class=\"glass-card rounded-xl p-5 flex flex-col gap-3 group relative border border-slate-200/60 hover:border-blue-400/60 transition\">
-      <div class=\"flex justify-between items-start\">
-        <div>
-          <h4 class=\"font-semibold text-slate-800 group-hover:text-blue-700 transition\">${f.nombre_finca}</h4>
-          <p class=\"text-[11px] font-medium uppercase tracking-wider text-slate-500 mt-1 flex flex-wrap gap-2\">
-            <span class=\"metric-chip\">Área: ${f.area_total} ha</span>
-            ${f.ubicacion? `<span class=\\"metric-chip\\">Ubicación: ${f.ubicacion}</span>`:''}
-          </p>
-        </div>
-        <span class=\"status-badge status-${f.estado}\">${f.estado.replace('_',' ')}</span>
-      </div>
-      <div class=\"flex gap-2 mt-auto pt-1\">
-        <a href=\"/gestionfinca/${f.id_finca}/lotes\" class=\"btn btn-outline btn-xs\">Lotes</a>
-        <a href=\"/gestionfinca/${f.id_finca}/edit\" class=\"btn btn-warning btn-xs\">Editar</a>
-        <form action=\"/gestionfinca/${f.id_finca}/delete\" method=\"POST\" onsubmit=\"return confirm('¿Eliminar finca?');\" style=\"margin:0;\">
-          <button type=\"submit\" class=\"btn btn-danger btn-xs\">Eliminar</button>
-        </form>
-      </div>
-    </div>`;
-  }
-
-  function renderPagination(state, selector, onChange){
-    const wrap = document.querySelector(selector);
-    if(!wrap) return;
-    if(state.pages <= 1){ wrap.innerHTML=''; return; }
-    let html='<div class="pagination flex items-center gap-2 text-[11px] font-medium">';
-    html += `<button data-page="prev" class="px-2 py-1 rounded border ${state.page===1?'opacity-40 cursor-not-allowed':'hover:bg-slate-100'}">Prev</button>`;
-    const span = Math.min(state.pages,5);
-    const start = Math.max(1, Math.min(state.page-2, state.pages-span+1));
-    for(let p=start; p<start+span; p++){
-      html += `<button data-page="${p}" class="px-2 py-1 rounded border ${p===state.page?'bg-blue-600 text-white border-blue-600':'hover:bg-slate-100'}">${p}</button>`;
-    }
-    html += `<button data-page="next" class="px-2 py-1 rounded border ${state.page===state.pages?'opacity-40 cursor-not-allowed':'hover:bg-slate-100'}">Next</button>`;
-    html += `<span class="ml-2 opacity-60">${state.page}/${state.pages}</span>`;
-    html+='</div>';
-    wrap.innerHTML=html;
-    wrap.querySelectorAll('button[data-page]').forEach(b=>{
-      b.addEventListener('click',()=>{
-        const v=b.getAttribute('data-page');
-        if(v==='prev' && state.page>1){ state.page--; onChange(); }
-        else if(v==='next' && state.page<state.pages){ state.page++; onChange(); }
-        else if(!isNaN(parseInt(v))){ state.page=parseInt(v); onChange(); }
-      });
-    });
-  }
-
-  function mountFincasDynamic(){
-    const container = document.querySelector('[data-fincas-container]');
-    if(!container) return;
-    const searchInput = document.getElementById('globalSearch');
-    const estadoFilter = document.getElementById('filterEstado');
-    async function load(){
-      container.innerHTML = skeletonCards(6);
-      const params = { q: searchInput?.value || '', estado: estadoFilter?.value || '', page:fincaPagination.page, limit:fincaPagination.limit };
-      const key = cacheKey(params);
-      if(cacheStore.fincas.has(key)){
-        container.innerHTML = cacheStore.fincas.get(key).map(renderFincaCard).join('');
-      }
-      const fincas = await fetchFincas(params);
-      cacheStore.fincas.set(key, fincas);
-      if(!fincas.length){ container.innerHTML = '<div class="text-center text-xs text-slate-500 col-span-full">Sin resultados</div>'; renderPagination(fincaPagination,'[data-fincas-pagination]',load); return; }
-      container.innerHTML = fincas.map(renderFincaCard).join('');
-      renderPagination(fincaPagination,'[data-fincas-pagination]',load);
-    }
-    const debounced = debounce(load,400);
-    searchInput && searchInput.addEventListener('input', debounced);
-    estadoFilter && estadoFilter.addEventListener('change', ()=>{ fincaPagination.page=1; load(); });
-    load();
-  }
-  window.mountFincasDynamic = mountFincasDynamic;
-
-  /* LOTES dinámicos */
-  async function fetchLotes(id_finca, params={}){
-    try {
-      const qs = new URLSearchParams(params).toString();
-      const res = await fetch(`/gestionfinca/api/fincas/${id_finca}/lotes`+(qs?'?'+qs:''));
-      if(!res.ok){ showToast('error','Error cargando lotes'); return []; }
-      const json = await res.json();
-      if(json.pagination){
-        lotePagination.pages = json.pagination.pages;
-        lotePagination.total = json.pagination.total;
-        lotePagination.page = json.pagination.page;
-      }
-      return json.data || [];
-    } catch(e){ showToast('error','Fallo de red lotes'); return []; }
-  }
-  function renderLoteCard(l){
-    return `<div class=\"glass-card rounded-xl p-5 flex flex-col gap-3 group relative border border-slate-200/60 hover:border-green-500/60 transition\">
-      <div class=\"flex justify-between items-start\">
-        <div>
-          <h4 class=\"font-semibold text-slate-800 group-hover:text-green-700 transition\">${l.nombre_lote}</h4>
-          <p class=\"text-[11px] font-medium uppercase tracking-wider text-slate-500 mt-1 flex flex-wrap gap-2\">
-            <span class=\"metric-chip\">Área: ${l.area} ha</span>
-            <span class=\"metric-chip\">Suelo: ${l.tipo_suelo}</span>
-            ${l.ph_suelo ? `<span class=\\"metric-chip\\">pH: ${l.ph_suelo}</span>`:''}
-          </p>
-        </div>
-      </div>
-      <div class=\"flex gap-2 mt-auto pt-1\">
-        <a href=\"/gestionfinca/lotes/${l.id_lote}/edit\" class=\"btn btn-warning btn-xs\">Editar</a>
-        <form action=\"/gestionfinca/lotes/${l.id_lote}/delete\" method=\"POST\" onsubmit=\"return confirm('¿Eliminar lote?');\" style=\"margin:0;\">
-          <button type=\"submit\" class=\"btn btn-danger btn-xs\">Eliminar</button>
-        </form>
-      </div>
-    </div>`;
-  }
-  function mountLotesDynamic(){
-    const container = document.querySelector('[data-lotes-container]');
-    if(!container) return;
-    const fincaId = container.getAttribute('data-id-finca');
-    if(!fincaId) return;
-    const sueloFilter = document.getElementById('filterSuelo');
-    const searchInput = document.getElementById('globalSearch');
+    // Catálogo: lógica movida a catalogo.js (módulo dedicado)
     async function load(){
       container.innerHTML = skeletonCards(6);
       const params = { q: searchInput?.value || '', tipo_suelo: sueloFilter?.value || '', page:lotePagination.page, limit:lotePagination.limit };
@@ -708,7 +547,11 @@ function initUnifiedToolbar(){
 // --- Utilitarian Catalog Tabs (list-based new layout) ---
 function initCatalogTabs(){
   const root = document.querySelector('.catalog-util');
-  if(!root) return; // page not using new layout
+  if(!window.__CATALOG_DEBUG){ window.__CATALOG_DEBUG = { steps:[], errors:[], tsStart: Date.now() }; }
+  const dbg = window.__CATALOG_DEBUG;
+  try { dbg.steps.push('initCatalogTabs:start'); } catch(_e){}
+  if(!root){ dbg.steps.push('initCatalogTabs:no-root'); return; } // page not using new layout
+  dbg.steps.push('initCatalogTabs:root-found');
 
   const tabs = root.querySelectorAll('.cu-tab');
   const panels = root.querySelectorAll('.cu-panel');
@@ -725,10 +568,14 @@ function initCatalogTabs(){
   }
 
   tabs.forEach(t=> t.addEventListener('click', ()=> activate(t.getAttribute('data-cu-tab'))));
+  dbg.steps.push('initCatalogTabs:tabs-bound='+tabs.length);
   search && search.addEventListener('input', window.debounce(()=> filterSort(), 160));
   sortSel && sortSel.addEventListener('change', filterSort);
+  if(search) dbg.steps.push('initCatalogTabs:search-bound');
+  if(sortSel) dbg.steps.push('initCatalogTabs:sort-bound');
 
   function filterSort(){
+  try { dbg.steps.push('filterSort:enter'); } catch(_e){}
   const panel = root.querySelector('.cu-panel.active');
     if(!panel) return;
     const q = (search?.value||'').trim().toLowerCase();
@@ -748,6 +595,7 @@ function initCatalogTabs(){
       default: cmp=(a,b)=> (a.dataset.name||'').localeCompare((b.dataset.name||''),'es',{sensitivity:'base'}); break;
     }
     visible.sort(cmp).forEach(n=> n.parentElement.appendChild(n));
+    try { dbg.steps.push('filterSort:done visible='+visible.length); } catch(_e){}
   }
 
   // keyboard navigation for list rows
@@ -771,6 +619,7 @@ function initCatalogTabs(){
     const row = e.target.closest('.cu-item');
     if(row){ openCatalogQuickView(row); }
   });
+  try { dbg.steps.push('initCatalogTabs:delegates-set'); } catch(_e){}
 
   function handleRowAction(action, row){
     if(!row) return;
@@ -789,6 +638,7 @@ function initCatalogTabs(){
   }
 
   function openCatalogQuickView(row){
+    try { dbg.steps.push('quickView:open:'+row.dataset.id); } catch(_e){}
     const existing = document.getElementById('quickViewOverlay'); existing && existing.remove();
     const overlay = document.createElement('div'); overlay.id='quickViewOverlay'; overlay.className='quick-view-overlay';
     const name = row.dataset.name || '';
@@ -843,6 +693,7 @@ function initCatalogTabs(){
         if(svg){ el.innerHTML = svg; el.dataset.hydrated='1'; }
         else if(!el.dataset.hydrated){ el.innerHTML = fallback; }
       });
+      try { dbg.steps.push('hydrateTabIcons:done'); } catch(_e){}
     }
     tryHydrate();
     // Observer para rehidrataciones si se reemplaza el contenido del root
@@ -1013,6 +864,7 @@ function initCatalogTabs(){
         initCatalogTabs();
         hydrateTabIcons();
         showToast && showToast('success','Catálogo actualizado');
+        try { dbg.steps.push('reloadCatalogUtil:success'); } catch(_e){}
       }
     } catch(_e){}
   }
@@ -1055,6 +907,8 @@ function initCatalogTabs(){
   const last = localStorage.getItem('catalog.tab');
   const initial = Array.from(tabs).some(t=> t.getAttribute('data-cu-tab')===last) ? last : tabs[0]?.getAttribute('data-cu-tab');
   if(initial) activate(initial); else filterSort();
+  try { dbg.steps.push('initCatalogTabs:complete'); } catch(_e){}
+  window.__CATALOG_DEBUG_LAST = dbg;
 }
 
 // Hook new layout init
