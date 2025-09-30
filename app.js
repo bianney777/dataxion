@@ -70,6 +70,7 @@ app.get('/dashboard', ensureAuthenticated, (req, res) => {
 });
 
 app.use('/gestionfinca', require('./routes/gestionfinca'));
+app.use('/catalogo', require('./routes/catalogo'));
 
 // Cerrar sesión
 app.get('/logout', (req, res) => {
