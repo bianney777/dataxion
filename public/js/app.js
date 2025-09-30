@@ -318,6 +318,108 @@
         showToast('success','Todo colapsado (placeholder)');
       });
       apply();
+
+      /* --- CRUD dinámico catálogo --- */
+      const modalHost = document.getElementById('modalHost');
+      function closeModal(){ modalHost.innerHTML=''; modalHost.style.display='none'; document.body.style.overflow=''; }
+      function openModal(key, data){
+        const schemas = {
+          createCategoriaCultivo: { title:'Nueva Categoría de Cultivo', endpoint:'/api/catalogo/categorias-cultivo', method:'POST', fields:[
+            {name:'nombre_categoria', label:'Nombre', required:true },
+            {name:'descripcion', label:'Descripción', type:'textarea'},
+            {name:'icono', label:'Icono (opcional)'}
+          ]},
+          createTipoCultivo: { title:'Nuevo Tipo de Cultivo', endpoint:'/api/catalogo/tipos-cultivo', method:'POST', fields:[
+            {name:'id_categoria', label:'Categoría', type:'select', required:true, optionsSource:'/api/catalogo/categorias-cultivo', optionLabel:'nombre_categoria', optionValue:'id_categoria'},
+            {name:'nombre_tipo', label:'Nombre', required:true },
+            {name:'nombre_cientifico', label:'Nombre Científico'},
+            {name:'descripcion', label:'Descripción', type:'textarea'},
+            {name:'temporada_optima', label:'Temporada'},
+            {name:'dias_cosecha', label:'Días Cosecha', type:'number'}
+          ]},
+          createVariedadCultivo: { title:'Nueva Variedad', endpoint:'/api/catalogo/variedades-cultivo', method:'POST', fields:[
+            {name:'id_tipo_cultivo', label:'Tipo Cultivo', type:'select', required:true, optionsSource:'/api/catalogo/tipos-cultivo', optionLabel:'nombre_tipo', optionValue:'id_tipo_cultivo'},
+            {name:'nombre_variedad', label:'Nombre', required:true },
+            {name:'caracteristicas', label:'Características', type:'textarea'},
+            {name:'resistencia_enfermedades', label:'Resist. Enfermedades', type:'textarea'},
+            {name:'rendimiento_esperado', label:'Rendimiento Esperado', type:'number'}
+          ]},
+          createCategoriaInsumo: { title:'Nueva Categoría de Insumo', endpoint:'/api/catalogo/categorias-insumo', method:'POST', fields:[
+            {name:'nombre_categoria', label:'Nombre', required:true },
+            {name:'descripcion', label:'Descripción', type:'textarea'},
+            {name:'tipo', label:'Tipo', type:'select-static', options:[
+              {value:'fertilizante', label:'Fertilizante'},
+              {value:'plaguicida', label:'Plaguicida'},
+              {value:'semilla', label:'Semilla'},
+              {value:'herramienta', label:'Herramienta'},
+              {value:'equipo', label:'Equipo'},
+              {value:'otro', label:'Otro'}
+            ]}
+          ]},
+          createInsumo: { title:'Nuevo Insumo', endpoint:'/api/catalogo/insumos', method:'POST', fields:[
+            {name:'id_categoria_insumo', label:'Categoría Insumo', type:'select', required:true, optionsSource:'/api/catalogo/categorias-insumo', optionLabel:'nombre_categoria', optionValue:'id_categoria_insumo'},
+            {name:'nombre_insumo', label:'Nombre', required:true },
+            {name:'descripcion', label:'Descripción', type:'textarea'},
+            {name:'fabricante', label:'Fabricante'},
+            {name:'composicion', label:'Composición', type:'textarea'},
+            {name:'instrucciones_uso', label:'Instrucciones de Uso', type:'textarea'},
+            {name:'precauciones', label:'Precauciones', type:'textarea'}
+          ]}
+        };
+        const schema = schemas[key]; if(!schema) return;
+        const formId='form_'+Date.now();
+        modalHost.style.display='block';
+        modalHost.innerHTML = `<div class="modal-overlay"><div class="modal-box animate-in"><button class="modal-close" data-close>&times;</button><h3>${schema.title}</h3><form id="${formId}" class="modal-form flex flex-col gap-5"></form><div class="flex justify-end gap-2 pt-2"><button class="btn btn-outline btn-sm" data-close>Cancelar</button><button class="btn btn-success btn-sm" type="submit" form="${formId}">Guardar</button></div></div></div>`;
+        document.body.style.overflow='hidden';
+        const form = modalHost.querySelector('form');
+        schema.fields.forEach(f=>{
+          const row=document.createElement('div'); row.className='form-row';
+          row.innerHTML = `<label>${f.label}${f.required?' *':''}</label>${buildInput(f, data? data[f.name]: null)}`;
+          form.appendChild(row);
+        });
+        modalHost.addEventListener('click', e=>{ if(e.target.matches('[data-close]') || e.target===modalHost.querySelector('.modal-overlay')) closeModal(); });
+        form.addEventListener('submit', async (e)=>{
+          e.preventDefault();
+          const payload={}; let valid=true;
+          schema.fields.forEach(f=>{
+            const el=form.querySelector(`[name="${f.name}"]`); if(!el) return; const val=el.value.trim(); if(f.required && !val){ valid=false; el.classList.add('ring-2','ring-red-400'); setTimeout(()=>el.classList.remove('ring-2','ring-red-400'),1500); } payload[f.name]= val || null; });
+          if(!valid){ showToast('error','Completa campos requeridos'); return; }
+          try {
+            const res = await fetch(schema.endpoint, { method:schema.method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            const j= await res.json();
+            if(!j.ok){ showToast('error', j.message||'Error'); return; }
+            showToast('success','Guardado');
+            closeModal();
+            reloadCatalogPartial();
+          } catch(err){ showToast('error','Fallo red'); }
+        });
+        // Cargar selects dinámicos
+        schema.fields.filter(f=>f.type==='select' && f.optionsSource).forEach(async f=>{
+          const sel=form.querySelector(`[name="${f.name}"]`); if(!sel) return; sel.innerHTML='<option value="">Cargando...</option>';
+            try { const r= await fetch(f.optionsSource); const j= await r.json(); if(j.ok){ sel.innerHTML='<option value="">Seleccione...</option>'+ j.data.map(o=>`<option value="${o[f.optionValue]}">${o[f.optionLabel]}</option>`).join(''); if(data && data[f.name]) sel.value=data[f.name]; } else sel.innerHTML='<option value="">Error</option>'; } catch(e){ sel.innerHTML='<option value="">Error</option>'; }
+        });
+      }
+      function buildInput(f, value){
+        if(f.type==='textarea') return `<textarea name="${f.name}" class="input-modern" rows="3">${value? value: ''}</textarea>`;
+        if(f.type==='number') return `<input type="number" step="any" name="${f.name}" value="${value? value: ''}" class="input-modern" />`;
+        if(f.type==='select-static') return `<select name="${f.name}" class="input-modern">${f.options.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}</select>`;
+        if(f.type==='select') return `<select name="${f.name}" class="input-modern"><option value="">Cargando...</option></select>`;
+        return `<input type="text" name="${f.name}" value="${value? value: ''}" class="input-modern" />`;
+      }
+      async function reloadCatalogPartial(){
+        try {
+          const r= await fetch('/catalogo'); if(!r.ok) return; const html= await r.text();
+          const parser=new DOMParser(); const doc=parser.parseFromString(html,'text/html');
+          const newCultivosGrid=doc.getElementById('cultivosGrid');
+          const newInsumosGrid=doc.getElementById('insumosGrid');
+          if(newCultivosGrid) document.getElementById('cultivosGrid').innerHTML=newCultivosGrid.innerHTML;
+          if(newInsumosGrid) document.getElementById('insumosGrid').innerHTML=newInsumosGrid.innerHTML;
+          showToast('success','Catálogo actualizado');
+        } catch(e){ /* silent */ }
+      }
+      document.querySelectorAll('[data-open-modal]').forEach(btn=>{
+        btn.addEventListener('click', ()=> openModal(btn.getAttribute('data-open-modal')));
+      });
     })();
   });
 })();

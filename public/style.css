@@ -130,3 +130,44 @@ html.dark .alert-error { background:#7f1d1d; color:#fee2e2; }
 @keyframes fadeInUp { from { opacity:0; transform:translateY(12px);} to { opacity:1; transform:translateY(0);} }
 .animate-in { animation:fadeInUp .6s cubic-bezier(.19,1,.22,1); }
 
+/* --- Catálogo Agrícola: Modales & Badges --- */
+.modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.55); backdrop-filter:blur(6px); display:flex; align-items:flex-start; justify-content:center; padding:90px 18px 40px; overflow-y:auto; z-index:120; animation:fadeInUp .45s cubic-bezier(.25,.8,.25,1); }
+.modal-box { width:100%; max-width:620px; background:rgba(255,255,255,0.9); border:1px solid #e2e8f0; border-radius:26px; padding:28px 30px 34px; position:relative; box-shadow:0 20px 70px -18px rgba(0,0,0,0.35); display:flex; flex-direction:column; gap:22px; }
+.modal-box h3 { margin:0; font-size:1.1rem; font-weight:600; letter-spacing:-.5px; background:linear-gradient(90deg,#2563eb,#16a34a); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.modal-close { position:absolute; top:12px; right:12px; background:#f1f5f9; border:1px solid #e2e8f0; width:34px; height:34px; border-radius:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:.25s; }
+.modal-close:hover { background:#e2e8f0; }
+.modal-grid { display:grid; gap:16px; grid-template-columns:1fr 1fr; }
+@media (max-width:640px){ .modal-grid { grid-template-columns:1fr; } .modal-box { padding:26px 22px 30px; border-radius:22px; } }
+
+.badge { display:inline-flex; align-items:center; gap:4px; font-size:.55rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; padding:5px 9px 5px; border-radius:999px; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; }
+.badge-blue { background:#dbeafe; color:#1e3a8a; border-color:#bfdbfe; }
+.badge-green { background:#dcfce7; color:#166534; border-color:#bbf7d0; }
+.badge-amber { background:#fef9c3; color:#92400e; border-color:#fde68a; }
+.badge-pink { background:#fce7f3; color:#9d174d; border-color:#fbcfe8; }
+
+.status-badge { font-size:.55rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; background:#2563eb; color:#fff; padding:6px 10px 5px; border-radius:999px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 4px rgba(37,99,235,0.35); }
+.status-activa { background:#16a34a; }
+.status-inactiva { background:#64748b; }
+
+.metric-chip { display:inline-flex; align-items:center; gap:4px; background:#f1f5f9; border:1px solid #e2e8f0; padding:4px 10px; font-size:.55rem; font-weight:600; letter-spacing:.05em; border-radius:999px; text-transform:uppercase; color:#475569; }
+html.dark .metric-chip { background:#1e293b; border-color:#334155; color:#cbd5e1; }
+
+html.dark .modal-overlay { background:rgba(0,0,0,0.6); }
+html.dark .modal-box { background:rgba(30,41,59,0.92); border-color:#334155; }
+html.dark .modal-close { background:#1e293b; border-color:#334155; color:#e2e8f0; }
+html.dark .modal-close:hover { background:#334155; }
+
+/* Inline form inputs inside modal */
+.modal-box .input-modern { font-size:.75rem; padding:9px 12px; }
+.form-row { display:flex; flex-direction:column; gap:6px; }
+.form-row label { font-size:.55rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#475569; }
+html.dark .form-row label { color:#94a3b8; }
+
+/* Placeholder shimmer for dynamic lists (variedades, etc.) */
+.shimmer { position:relative; overflow:hidden; background:#f1f5f9; }
+.shimmer::after { content:""; position:absolute; inset:0; background:linear-gradient(110deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.6) 40%, rgba(255,255,255,0) 80%); animation:shimmer 1.8s infinite; }
+@keyframes shimmer { 0% { transform:translateX(-100%);} 100% { transform:translateX(100%);} }
+html.dark .shimmer { background:#1e293b; }
+html.dark .shimmer::after { background:linear-gradient(110deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.15) 40%, rgba(255,255,255,0) 80%); }
+
+

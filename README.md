@@ -156,3 +156,6 @@ ISC (ajustar según necesidad)
 
 ---
 Hecho con foco en rendimiento y DX. Cualquier mejora que quieras, crea un issue o extiende el modelo. ¡Disfruta!
+
+origin  https://github.com/bianney777/dataxion.git (fetch)
+origin  https://github.com/bianney777/dataxion.git (push)

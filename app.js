@@ -71,6 +71,8 @@ app.get('/dashboard', ensureAuthenticated, (req, res) => {
 
 app.use('/gestionfinca', require('./routes/gestionfinca'));
 app.use('/catalogo', require('./routes/catalogo'));
+// API catálogo agrícola CRUD
+app.use('/api/catalogo', require('./routes/catalogoApi'));
 
 // Cerrar sesión
 app.get('/logout', (req, res) => {

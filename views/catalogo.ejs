@@ -24,6 +24,18 @@
         </div>
       </div>
 
+      <div class="glass-card rounded-xl p-4 mb-6 flex flex-wrap gap-2 items-center justify-between border border-slate-200/60">
+        <div class="flex gap-2 flex-wrap">
+          <button class="btn btn-success btn-xs" data-open-modal="createCategoriaCultivo">+ Cat. Cultivo</button>
+          <button class="btn btn-success btn-xs" data-open-modal="createTipoCultivo">+ Tipo Cultivo</button>
+          <button class="btn btn-success btn-xs" data-open-modal="createVariedadCultivo">+ Variedad</button>
+          <div class="w-px h-6 bg-slate-200"></div>
+          <button class="btn btn-warning btn-xs" data-open-modal="createCategoriaInsumo">+ Cat. Insumo</button>
+          <button class="btn btn-warning btn-xs" data-open-modal="createInsumo">+ Insumo</button>
+        </div>
+        <div class="text-[10px] font-medium uppercase tracking-wider text-slate-400">CRUD en vivo</div>
+      </div>
+
       <div class="glass-card rounded-xl p-4 mb-6 flex flex-col md:flex-row gap-4 md:items-end">
         <div class="flex flex-col w-full md:w-1/3">
           <label class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Buscar</label>
@@ -123,6 +135,7 @@
     </aside>
   </div>
   <!-- Lógica de filtrado movida a app.js (catalogInit) -->
+  <div id="modalHost" style="display:none"></div>
   <%- include('partial/footer') %>
 </body>
 </html>
