@@ -1,24 +1,47 @@
-# DataXion – Gestión de Fincas y Lotes
+# DataXion – Plataforma de Gestión Agrícola Integral
 
-Aplicación Node.js (Express + EJS) para gestionar fincas y sus lotes agrícolas con soporte de zonas geográficas, métricas, exportación de datos y UI moderna responsive.
+Aplicación Node.js (Express + EJS + MySQL) para gestionar fincas, lotes, ciclos y el módulo avanzado de **Labores & Manejo Agrícola** (tipos de labores, labores ejecutadas, aplicaciones de insumos, riegos, insumos y categorías), con métricas en tiempo real, exportaciones CSV/PDF (incluyendo un PDF resumen multi‑sección) y una interfaz unificada.
 
 ## 🚀 Características principales
-- Autenticación protegida (middleware `ensureAuthenticated`).
-- CRUD de Fincas y Lotes.
-- Integración con tabla `zonas_geograficas` (selector dinámico).
-- Campo GEOMETRY opcional para coordenadas de lotes con lógica de fallback.
-- UI moderna: Tailwind + estilos custom (cards, dark mode, skeleton loading, toasts).
-- Búsqueda, filtros, paginación en fincas y lotes (API JSON + render dinámico).
-- Métricas rápidas: total fincas, área acumulada, % activas, pH promedio de lotes.
-- Exportaciones: CSV, Excel (SheetJS), PDF (jsPDF + autotable) con barra de progreso.
-- Cache front-end de páginas para minimizar llamadas.
+### Núcleo (Fincas / Lotes / Zonas)
+- Autenticación protegida (`ensureAuthenticated`) y rol admin básico.
+- CRUD de Fincas y Lotes con métricas (área, % activas, pH promedio, etc.).
+- Integración con `zonas_geograficas` y soporte opcional a columna GEOMETRY.
+- UI moderna: dark mode, skeletons, notificaciones, filtros y paginación ligera.
 
-## 📂 Estructura de carpetas
+### Módulo Labores & Manejo Agrícola
+- Vista unificada (sin tabs) que muestra simultáneamente:
+  - Tipos de Labor
+  - Labores ejecutadas
+  - Aplicaciones de Insumos (deriva automáticamente el tipo desde el insumo)
+  - Riegos
+  - Insumos y Categorías de Insumos (catálogo)
+- Select de insumos agrupado por categoría + filtro incremental en vivo.
+- Etiquetas coloreadas (estado, tipo de insumo, etc.).
+- Totales agregados por sección (costos, cantidades, volúmenes) mostrados en `<tfoot>` y replicados en exportaciones.
+- Exportaciones: CSV/PDF por entidad + **PDF resumen multi‑sección** (Labores, Aplicaciones, Riegos, Catálogo de Insumos y totales globales).
+
+### Métricas de Sesión / Usuarios
+- Conteo runtime de visitantes únicos y usuarios activos (ventana deslizante de 5 minutos).
+- Endpoint interno opcional de diagnóstico de rutas y `/health`.
+
+### Exportaciones y Reportes
+- CSV genéricos por entidad.
+- PDF estilizados (pdfkit) para Insumos y resumen global.
+- Posibilidad de ampliar a Excel/JSON sin romper estructura.
+
+### Robustez & Operación
+- Bootstrap con reconexión de DB (en `connectDB`), selección dinámica de puerto con fallback si está ocupado.
+- Manejo de señales (`SIGINT`, `SIGTERM`) y apagado suave (graceful shutdown) del servidor.
+- Handlers globales para `unhandledRejection` y `uncaughtException` que intentan cerrar el server antes de salir.
+- Middleware de locals por defecto que evita errores EJS cuando faltan variables (`totals`, colecciones vacías, etc.).
+
+## 📂 Estructura de carpetas (resumen)
 ```
 config/           Configuración DB (mysql2)
 controllers/      Lógica de negocio (auth, dashboard, gestionFinca)
 middleware/       Autenticación
-models/           Modelos: Finca, Lote, User, Zona
+models/           Modelos: Finca, Lote, User, Zona, (TiposLabor, Labor, Aplicacion, Riego, Insumo, CategoriaInsumo, etc.)
 public/           CSS/JS estático y estilos globales
 routes/           Rutas Express
 views/            Plantillas EJS (layout y páginas)
@@ -29,19 +52,23 @@ views/            Plantillas EJS (layout y páginas)
 - MySQL >= 5.7 (ideal MariaDB / MySQL 8 para funciones espaciales)
 
 ## ⚙️ Variables de entorno (`.env`)
-Ejemplo:
+Ejemplo (adaptar):
 ```
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=tu_password
 DB_NAME=tu_bd
 JWT_SECRET=clave_super_secreta
-PORT=3000
+PORT=5000
+REQUEST_LOG=true               # (opcional) log de cada request
+ENABLE_ROUTE_DEBUG=false       # activar endpoint /__routes
+METRICS_LOG_INTERVAL_MS=30000  # intervalo log métricas
+ENABLE_EMAIL_VERIFICATION=false
 ```
 (No subir `.env` al repositorio)
 
-## 🗄 Tablas mínimas (resumen)
-(Adaptar según tu script real)
+## 🗄 Tablas mínimas (resumen núcleo)
+(Adaptar según tu script real; el módulo de Labores requiere tablas adicionales: tipos_labores, labores_agricolas, aplicaciones, riegos, insumos, categorias_insumos, etc.)
 ```sql
 CREATE TABLE zonas_geograficas (
   id_zona INT AUTO_INCREMENT PRIMARY KEY,
@@ -88,15 +115,16 @@ CREATE TABLE lotes (
 ## ▶️ Instalación & ejecución
 ```bash
 npm install
-node app.js   # o nodemon app.js si tienes nodemon
+node app.js        # inicia bootstrap, intenta PORT o PORT+1 si ocupado
+# o usando nodemon si instalado globalmente
 ```
-Abrir: http://localhost:3000
+Abrir: http://localhost:5000 (o el puerto mostrado en consola)
 
 ## 🔐 Autenticación
 - Middleware `ensureAuthenticated` protege las rutas de gestión.
 - Ajustar `authController` según tu implementación real de login/register.
 
-## 🌐 Endpoints principales
+## 🌐 Endpoints principales (parcial)
 ### Vistas
 - `GET /gestionfinca` – Panel de gestión.
 - `GET /gestionfinca/:id_finca/lotes` – Ver lotes de una finca.
@@ -112,6 +140,16 @@ Abrir: http://localhost:3000
 ### API Zonas
 - `GET /gestionfinca/api/zonas`
 
+### Labores & Manejo
+- `GET /labores` (vista unificada)
+- Exportaciones (ejemplos):
+  - `GET /labores/export/labores.csv`
+  - `GET /labores/export/aplicaciones.csv`
+  - `GET /labores/export/riegos.csv`
+  - `GET /labores/export/insumos.pdf`
+  - `GET /labores/export/summary/:cultivo.pdf`
+  - (según parámetros implementados en controlador)
+
 ## 🧭 Manejo de coordenadas (GEOMETRY)
 En `models/Lote.js`:
 1. Intenta `ST_GeomFromText('POINT(lon lat)')`.
@@ -121,35 +159,40 @@ En `models/Lote.js`:
 Puedes luego mejorar: validar SRID real, usar `POINT(lon lat)` con índices espaciales, o separar lat/long en columnas adicionales.
 
 ## 📤 Exportaciones
-Ubicadas en `public/js/app.js`:
-- CSV manual.
-- Excel: SheetJS.
-- PDF: jsPDF + autotable.
-Incluyen barra de progreso overlay y toasts.
+Frontend (legacy) usa jsPDF / SheetJS para algunos catálogos. El módulo Labores utiliza generación server-side (pdfkit) para:
+- PDF Insumos con encabezado estilizado.
+- PDF Resumen multi‑sección (portada + tablas + totales).
+- CSV simplificados generados desde controladores.
+
+Extender: agregar Excel/JSON centralizado reutilizando los arrays en el controlador (`laboresController`).
 
 ## 🎨 UI / UX
 - Dark mode persistente (localStorage).
 - Skeleton loaders mientras carga data.
-- Chips de métricas, badges de estado, botones gradiente.
-- Paginación ligera (sin librerías externas).
+- Chips de métricas, badges con colores semánticos y etiquetas de tipo/estado.
+- Select filtrable de insumos (normaliza acentos, agrupado por categoría).
+- Tablas con `<tfoot>` para totales.
 
 ## 🧪 Tests
-(No incluidos aún) – Sugerencias:
-- Tests de modelos (creación finca/lote).
-- Tests de API (filtros, paginación, métricas).
+No incluidos aún. Sugerencias:
+- Modelos: creación de finca, lote, labor, aplicación derivando tipo desde insumo.
+- Controladores: exportaciones CSV/PDF (verificar cabeceras y contenido mínimo).
+- Métricas runtime: simular múltiples requests y validar límites ventana activa.
 
 ## 🛠 Próximas mejoras sugeridas
-- Filtro por zona en panel de fincas.
-- Mostrar nombre de zona en tarjetas.
-- Mapa interactivo para coordenadas (Leaflet / Mapbox).
-- Validación robusta backend (celebrate / joi / zod).
-- Seguridad: rate limiting, helmet, CSRF.
-- Cache server-side (Redis) para métricas.
+- Paginación avanzada y filtros combinados en módulo Labores.
+- Export global consolidado (JSON / Excel único).
+- Mapa interactivo (Leaflet / Mapbox) para visualización de lotes y labores georreferenciadas.
+- Validación robusta (joi / zod) y sanitización de entradas.
+- Rate limiting + Helmet + CSRF tokens.
+- Cache server-side (Redis) para métricas y catálogos poco cambiantes.
+- Internacionalización (i18n) de etiquetas y PDF.
 
 ## 🤝 Contribución
-1. Fork / branch
-2. Commit mensajes tipo conventional commits (`feat:`, `fix:`, etc.)
-3. Pull Request
+1. Crea un branch descriptivo (`feat/labores-paginacion`).
+2. Usa conventional commits (`feat:`, `fix:`, `refactor:`, `docs:`...).
+3. Ejecuta lint/tests (cuando existan) antes del PR.
+4. Describe claramente qué módulo impacta y captura de pantalla si es UI.
 
 ## 📄 Licencia
 ISC (ajustar según necesidad)
@@ -157,5 +200,15 @@ ISC (ajustar según necesidad)
 ---
 Hecho con foco en rendimiento y DX. Cualquier mejora que quieras, crea un issue o extiende el modelo. ¡Disfruta!
 
-origin  https://github.com/bianney777/dataxion.git (fetch)
-origin  https://github.com/bianney777/dataxion.git (push)
+
+## 🧯 Troubleshooting
+| Problema | Causa posible | Solución |
+|----------|---------------|----------|
+| `totals is not defined` en `labores.ejs` | Controlador no pasó variable | Middleware de locals ya mitiga; asegura calcular totales antes de render si corresponde |
+| `server is not defined` en uncaughtException | Variable local no accesible | Definir `let server` global y asignar en `listen` (ya corregido) |
+| Puerto en uso | Otro proceso en 5000 | El bootstrap intenta `PORT+1`; o libera proceso (`netstat` / `Get-NetTCPConnection`) |
+| PDF vacío | Datos vacíos | Verifica filtros y que el cultivo seleccionado tenga registros |
+| Métricas no muestran usuarios | JWT inválido o expirado | Re-login para refrescar token |
+
+---
+Hecho con foco en rendimiento, extensibilidad y DX. Para ideas nuevas abre un issue o envía un PR. 🌱
